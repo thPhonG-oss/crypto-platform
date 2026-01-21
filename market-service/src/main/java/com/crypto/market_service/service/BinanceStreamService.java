@@ -71,7 +71,8 @@ public class BinanceStreamService {
                     }
                 }, finalUrl);
             } catch (Exception e) {
-                log.error("Lỗi kết nối Binance", e);
+                log.error("Mất kết nối, thử lại sau 5s...");
+                try { Thread.sleep(5000); } catch (InterruptedException ig) {}
             }
         }).start();
     }
