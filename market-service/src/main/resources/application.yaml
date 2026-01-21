@@ -8,7 +8,7 @@ spring:
     # Nếu chạy Local (IntelliJ), dùng localhost. Nếu chạy Docker toàn bộ, đổi thành 'timescaledb'
     url: jdbc:postgresql://localhost:5432/crypto_core
     username: admin
-    password: admin_password
+    password: admin
     driver-class-name: org.postgresql.Driver
 
   jpa:
