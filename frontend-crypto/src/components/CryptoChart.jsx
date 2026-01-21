@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { createChart, ColorType } from "lightweight-charts";
+import { createChart, ColorType, CandlestickSeries } from "lightweight-charts";
 import axios from "axios";
 import SockJS from "sockjs-client";
 import { Stomp } from "@stomp/stompjs";
@@ -25,7 +25,7 @@ const CryptoChart = ({ symbol = "BTCUSDT" }) => {
     });
 
     // Tạo series nến (Candlestick)
-    const candlestickSeries = chart.addCandlestickSeries({
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#26a69a", // Màu nến tăng (Xanh)
       downColor: "#ef5350", // Màu nến giảm (Đỏ)
       borderVisible: false,
