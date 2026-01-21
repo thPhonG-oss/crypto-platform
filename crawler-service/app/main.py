@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+import py_eureka_client.eureka_client as eureka_client
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -12,19 +13,18 @@ from app import models, schemas
 from loguru import logger
 
 EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://discovery-service:8761/eureka/")
-APP_NAME = "crawler-service"
-INSTANCE_PORT = 8000
-
+SERVICE_PORT = settings.SERVICE_PORT
+SERVICE_NAME = settings.SERVICE_NAME
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. KHI KHỞI ĐỘNG: Đăng ký với Eureka
-    print(f"🔄 Đang đăng ký {APP_NAME} vào Eureka tại {EUREKA_SERVER}...")
+    print(f"🔄 Đang đăng ký {SERVICE_NAME} vào Eureka tại {EUREKA_SERVER}...")
     await eureka_client.init_async(
         eureka_server=EUREKA_SERVER,
-        app_name=APP_NAME,
-        instance_port=INSTANCE_PORT,
+        app_name=SERVICE_NAME,
+        instance_port=SERVICE_PORT,
         # Địa chỉ IP mà các service khác sẽ gọi đến (quan trọng trong Docker)
-        instance_host=os.getenv("HOSTNAME", "crawler-service")
+        instance_host=os.getenv("HOSTNAME", SERVICE_NAME)
     )
     print("✅ Đăng ký Eureka thành công!")
     
