@@ -17,7 +17,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Redis (Message Broker cho WebSocket Scale)
+  # 2. Redis (Message Broker)
   redis:
     image: redis:alpine
     container_name: crypto_redis
@@ -33,9 +33,11 @@ services:
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=crypto_market
+      - POSTGRES_DB=crypto_core
     ports:
       - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
     networks:
       - crypto-net
 
@@ -46,13 +48,38 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - SPRING_DATA_REDIS_HOST=redis
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - SPRING_REDIS_HOST=redis
     networks:
       - crypto-net
     depends_on:
       discovery-service:
         condition: service_healthy
+
+  # 5. Market Service
+  market-service:
+    build: ./market-service
+    container_name: market-service
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/crypto_core
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_DATA_REDIS_HOST=redis
+      - APP_BINANCE_SYMBOLS=btcusdt,ethusdt,bnbusdt,solusdt
+    networks:
+      - crypto-net
+    # SỬA LỖI TẠI ĐÂY: Chuyển hết sang dạng key-value
+    depends_on:
+      timescaledb:
+        condition: service_started
+      redis:
+        condition: service_started
+      discovery-service:
+        condition: service_healthy
+
+volumes:
+  timescaledb_data:
 
 networks:
   crypto-net:

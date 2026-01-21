@@ -1,19 +1,35 @@
 server:
-  port: 0 # Mẹo hay: Số 0 nghĩa là "Random Port".
-  # Vì chúng ta chạy nhiều instance để scale, nên để random tránh trùng port.
-  # Eureka sẽ ghi nhận port thực tế và báo cho Gateway biết.
+  port: 0
 
 spring:
   application:
-    name: market-service # Tên này phải trùng khớp để Gateway tìm ra
+    name: market-service
+  datasource:
+    # Nếu chạy Local (IntelliJ), dùng localhost. Nếu chạy Docker toàn bộ, đổi thành 'timescaledb'
+    url: jdbc:postgresql://localhost:5432/crypto_core
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   data:
     redis:
-      host: localhost
+      host: localhost # Lưu ý: Khi chạy Docker thì đổi thành 'redis'
       port: 6379
 
+app:
+  binance:
+    symbols: btcusdt,ethusdt,bnbusdt,solusdt
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
   instance:
-    prefer-ip-address: true # Ưu tiên dùng IP thay vì hostname (tránh lỗi DNS trong Docker)
+    prefer-ip-address: true
