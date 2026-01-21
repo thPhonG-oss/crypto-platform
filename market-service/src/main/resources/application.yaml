@@ -17,3 +17,13 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true # Ưu tiên dùng IP thay vì hostname (tránh lỗi DNS trong Docker)
+
+app:
+  binance:
+    symbols:
+      - btcusdt
+      - ethusdt
+      - bnbusdt
+      - solusdt
+      - adausdt
+      - xrpusdt

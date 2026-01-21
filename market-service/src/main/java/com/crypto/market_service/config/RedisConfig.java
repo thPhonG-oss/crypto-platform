@@ -11,8 +11,11 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 @Configuration
 public class RedisConfig {
 
-    // Tên kênh mà chúng ta sẽ chat với nhau qua Redis
-    public static final String MARKET_TOPIC = "market_realtime_data";
+    // Prefix cho các kênh dữ liệu. Ví dụ: market_data:btcusdt
+    public static final String MARKET_TOPIC_PREFIX = "market_data:";
+
+    // Pattern để lắng nghe tất cả các kênh bắt đầu bằng prefix trên
+    public static final String MARKET_TOPIC_PATTERN = "market_data:*";
 
     // 1. Container lắng nghe tin nhắn từ Redis
     @Bean
@@ -20,14 +23,17 @@ public class RedisConfig {
                                             MessageListenerAdapter listenerAdapter) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        // Đăng ký lắng nghe topic "market_realtime_data"
-        container.addMessageListener(listenerAdapter, new PatternTopic(MARKET_TOPIC));
+
+        // QUAN TRỌNG: Sử dụng PatternTopic để nghe nhiều kênh cùng lúc
+        container.addMessageListener(listenerAdapter, new PatternTopic(MARKET_TOPIC_PATTERN));
+
         return container;
     }
 
     // 2. Bộ chuyển đổi: Khi có tin nhắn đến -> gọi hàm handleMessage của RedisSubscriber
     @Bean
     MessageListenerAdapter listenerAdapter(RedisSubscriber subscriber) {
+        // Hàm xử lý bên RedisSubscriber vẫn tên là "handleMessage"
         return new MessageListenerAdapter(subscriber, "handleMessage");
     }
 }

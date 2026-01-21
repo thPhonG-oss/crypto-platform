@@ -15,7 +15,7 @@ public class RedisSubscriber {
 
     // Hàm này được RedisConfig gọi khi có tin mới
     public void handleMessage(String message) {
-        log.info("⚡ Nhận từ Redis: {}", message);
+        log.info("Received from Redis: {}", message);
 
         // Đẩy xuống Frontend đang subscribe kênh '/topic/market'
         messagingTemplate.convertAndSend("/topic/market", message);
