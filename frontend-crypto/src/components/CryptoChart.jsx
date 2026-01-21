@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { createChart, ColorType, CandlestickSeries } from "lightweight-charts";
 import axios from "axios";
-import SockJS from "sockjs-client";
+import SockJS from "socketjs-client";
 import { Stomp } from "@stomp/stompjs";
 
 const CryptoChart = ({ symbol = "BTCUSDT" }) => {

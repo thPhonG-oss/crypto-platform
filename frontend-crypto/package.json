@@ -17,7 +17,7 @@
     "lightweight-charts": "^5.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "sockjs-client": "^1.6.1",
+    "socketjs-client": "^1.0.2",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
