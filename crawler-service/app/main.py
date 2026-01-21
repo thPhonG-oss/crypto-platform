@@ -38,7 +38,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Crawler Service",
     description="AI-Powered News Crawler for Crypto Platform",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware
