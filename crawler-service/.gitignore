@@ -1,0 +1,11 @@
+.env
+
+__pycache__
+
+
+# Logs
+*.log
+
+# IDE
+.idea
+.vscode
