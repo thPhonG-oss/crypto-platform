@@ -1,0 +1,19 @@
+server:
+  port: 0 # Mẹo hay: Số 0 nghĩa là "Random Port".
+  # Vì chúng ta chạy nhiều instance để scale, nên để random tránh trùng port.
+  # Eureka sẽ ghi nhận port thực tế và báo cho Gateway biết.
+
+spring:
+  application:
+    name: market-service # Tên này phải trùng khớp để Gateway tìm ra
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true # Ưu tiên dùng IP thay vì hostname (tránh lỗi DNS trong Docker)

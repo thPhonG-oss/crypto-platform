@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  # 1. Service Discovery (Eureka)
+  discovery-service:
+    build: ./discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - crypto-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis (Message Broker cho WebSocket Scale)
+  redis:
+    image: redis:alpine
+    container_name: crypto_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - crypto-net
+
+  # 3. TimescaleDB (Lưu giá lịch sử)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: crypto_timescaledb
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=crypto_market
+    ports:
+      - "5432:5432"
+    networks:
+      - crypto-net
+
+  # 4. API Gateway
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_REDIS_HOST=redis
+    networks:
+      - crypto-net
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+networks:
+  crypto-net:
+    driver: bridge

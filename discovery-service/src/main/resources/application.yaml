@@ -1,0 +1,18 @@
+server:
+  port: 8761 # Cổng tiêu chuẩn của Eureka. Đừng đổi nếu không có lý do đặc biệt.
+
+spring:
+  application:
+    name: discovery-service # Tên định danh của service này
+
+eureka:
+  client:
+    # False vì: Đây là SERVER, nó không cần tự đăng ký với chính nó.
+    register-with-eureka: false
+    # False vì: Nó giữ danh bạ gốc, không cần phải đi tải danh bạ từ ai khác.
+    fetch-registry: false
+  server:
+    # Tắt chế độ chờ (Self Preservation) khi dev để debug cho dễ.
+    # Nếu server thấy các node con chết, nó xóa ngay lập tức khỏi danh sách.
+    enable-self-preservation: false
+    wait-time-in-ms-when-sync-empty: 0

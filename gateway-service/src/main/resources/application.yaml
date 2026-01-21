@@ -1,0 +1,31 @@
+server:
+  port: 8080 # Cổng chính mà User/Frontend sẽ gọi vào
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true # Tự động tìm service. Ví dụ gọi /market-service/** sẽ tự trỏ về Market Service
+          lower-case-service-id: true # Chuyển tên service thành chữ thường (Market-Service -> market-service)
+
+      # Cấu hình CORS (Cross-Origin Resource Sharing)
+      # Để Frontend (chạy localhost:3000 hoặc 5173) gọi được API mà không bị chặn
+      globalcors:
+        cors-configurations:
+          "[/**]": # Áp dụng cho mọi đường dẫn
+            allowedOrigins: "*" # Cho phép tất cả (Dev mode). Prod thì nên để "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      # Địa chỉ của Discovery Service đã tạo ở Bước 1
+      defaultZone: http://localhost:8761/eureka/
