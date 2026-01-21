@@ -88,6 +88,7 @@ services:
       - SERVICE_NAME=crawler-service
       - SERVICE_PORT=8000
       - ENABLE_SCHEDULER=true
+      - HOSTNAME=crawler-service
     ports:
       - "8001:8000"
     networks:

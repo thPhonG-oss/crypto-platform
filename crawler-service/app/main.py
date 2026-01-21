@@ -9,6 +9,29 @@ from app.database import get_db, init_db
 from app import models, schemas
 from loguru import logger
 
+EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://discovery-service:8761/eureka/")
+APP_NAME = "crawler-service"
+INSTANCE_PORT = 8000
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. KHI KHỞI ĐỘNG: Đăng ký với Eureka
+    print(f"🔄 Đang đăng ký {APP_NAME} vào Eureka tại {EUREKA_SERVER}...")
+    await eureka_client.init_async(
+        eureka_server=EUREKA_SERVER,
+        app_name=APP_NAME,
+        instance_port=INSTANCE_PORT,
+        # Địa chỉ IP mà các service khác sẽ gọi đến (quan trọng trong Docker)
+        instance_host=os.getenv("HOSTNAME", "crawler-service")
+    )
+    print("✅ Đăng ký Eureka thành công!")
+    
+    yield
+    
+    # 2. KHI TẮT: Hủy đăng ký
+    print("🛑 Đang hủy đăng ký khỏi Eureka...")
+    await eureka_client.stop_async()
+
 # Initialize FastAPI
 app = FastAPI(
     title="Crawler Service",

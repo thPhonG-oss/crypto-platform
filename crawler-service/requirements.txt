@@ -28,7 +28,7 @@ python-multipart==0.0.6
 aiohttp==3.9.1
 
 # Service Discovery (Optional - for Eureka)
-py-eureka-client==0.11.2
+py-eureka-client==1.2.6
 
 # Logging & Monitoring
 loguru==0.7.2
