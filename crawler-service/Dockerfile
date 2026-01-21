@@ -1,27 +1,17 @@
-FROM python:3.11-slim
+# SỬ DỤNG IMAGE CHÍNH HÃNG CỦA PLAYWRIGHT (Đã bao gồm Python + Browsers + Dependencies)
+# Chọn tag 'jammy' (Ubuntu 22.04) để tương thích tốt nhất
+FROM mcr.microsoft.com/playwright/python:v1.41.0-jammy
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    chromium \
-    chromium-driver \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set Chrome/Chromium environment
-ENV CHROME_BIN=/usr/bin/chromium
-ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
-
-# Copy requirements first (Docker layer caching)
+# Copy và cài đặt thư viện Python (Scrapy, v.v...)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers (if needed)
-RUN playwright install chromium --with-deps
+# Cài đặt trình duyệt (Chỉ cần Chromium cho nhẹ, vì Image gốc đã có môi trường rồi)
+RUN playwright install chromium
 
-# Copy application code
+# Copy code
 COPY ./app /app/app
 
 # Expose port
