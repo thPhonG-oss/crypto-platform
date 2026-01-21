@@ -9,5 +9,6 @@ RUN mvn clean package -DskipTests
 # 2. Run Stage: Dùng JRE nhẹ để chạy file .jar
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+RUN apk add --no-cache curl
 COPY --from=build /app/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
