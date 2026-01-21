@@ -1,5 +1,5 @@
 import React from "react";
-import CryptoChart from "./components/CryptoChart";
+import MarketDashboard from "./components/MarketDashboard";
 
 function App() {
   return (
@@ -9,8 +9,7 @@ function App() {
       </h1>
 
       <div className="w-full max-w-6xl">
-        {/* Hiển thị biểu đồ BTCUSDT */}
-        <CryptoChart symbol="BTCUSDT" />
+        <MarketDashboard />
       </div>
     </div>
   );

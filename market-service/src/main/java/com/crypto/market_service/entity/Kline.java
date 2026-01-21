@@ -47,6 +47,9 @@ public class Kline {
     @Column(nullable = false)
     private LocalDateTime closeTime;
 
+    @Column(nullable = false, length = 5)
+    private String interval; // 1m, 5m, 1h, 1d
+
     // Helper convert timestamp -> LocalDateTime
     public static LocalDateTime convertTime(long timestamp) {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());

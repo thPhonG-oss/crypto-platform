@@ -1,10 +1,8 @@
 package com.crypto.market_service.service;
 
-import com.crypto.market_service.config.RedisConfig;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -15,8 +13,12 @@ import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.crypto.market_service.config.RedisConfig;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -25,6 +27,9 @@ public class BinanceStreamService {
     // 1. Inject danh sách từ application.yaml
     @Value("${app.binance.symbols}")
     private List<String> symbols;
+
+    @Value("${app.binance.intervals}")
+private List<String> intervals; // 1m,5m,15m,1h,4h,1d
 
     private static final String BASE_URL = "wss://stream.binance.com:9443/stream?streams=";
 
@@ -45,8 +50,9 @@ public class BinanceStreamService {
                 }
 
                 String streams = symbols.stream()
-                        .map(s -> s.toLowerCase() + "@kline_1m") // Đảm bảo chữ thường
-                        .collect(Collectors.joining("/"));
+    .flatMap(symbol -> intervals.stream()
+        .map(interval -> symbol.toLowerCase() + "@kline_" + interval))
+    .collect(Collectors.joining("/"));
 
                 String finalUrl = BASE_URL + streams;
 

@@ -27,6 +27,7 @@ spring:
 app:
   binance:
     symbols: btcusdt,ethusdt,bnbusdt,solusdt
+    intervals: 1m,5m,15m,1h,4h,1d
 eureka:
   client:
     service-url:
