@@ -10,28 +10,30 @@ from typing import List, Optional
 from app.config import settings
 from app.database import get_db, init_db
 from app import models, schemas
+from app.services.crawler_service import CrawlerService
+from app.crawlers.sources import get_all_sources
 from loguru import logger
 
 EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://discovery-service:8761/eureka/")
 SERVICE_PORT = settings.SERVICE_PORT
 SERVICE_NAME = settings.SERVICE_NAME
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. KHI KHỞI ĐỘNG: Đăng ký với Eureka
-    print(f"🔄 Đang đăng ký {SERVICE_NAME} vào Eureka tại {EUREKA_SERVER}...")
+    # Startup
+    logger.info(f"🔄 Đang đăng ký {SERVICE_NAME} vào Eureka tại {EUREKA_SERVER}...")
     await eureka_client.init_async(
         eureka_server=EUREKA_SERVER,
         app_name=SERVICE_NAME,
         instance_port=SERVICE_PORT,
-        # Địa chỉ IP mà các service khác sẽ gọi đến (quan trọng trong Docker)
         instance_host=os.getenv("HOSTNAME", SERVICE_NAME)
     )
-    print("✅ Đăng ký Eureka thành công!")
+    logger.info("✅ Đăng ký Eureka thành công!")
     
     yield
     
-    # 2. KHI TẮT: Hủy đăng ký
-    print("🛑 Đang hủy đăng ký khỏi Eureka...")
+    # Shutdown
+    logger.info("🛑 Đang hủy đăng ký khỏi Eureka...")
     await eureka_client.stop_async()
 
 # Initialize FastAPI
@@ -54,6 +56,9 @@ app.add_middleware(
 # Configure logger
 logger.add("logs/crawler_{time}.log", rotation="500 MB", level=settings.LOG_LEVEL)
 
+# Initialize CrawlerService
+crawler_service = CrawlerService()
+
 
 # ============== Startup/Shutdown Events ==============
 
@@ -64,7 +69,6 @@ async def startup_event():
     init_db()
     logger.info("Database initialized")
     
-    # TODO: Start scheduler if enabled
     if settings.ENABLE_SCHEDULER:
         logger.info("Scheduler will be initialized in next step")
 
@@ -81,13 +85,11 @@ async def shutdown_event():
 async def health_check(db: Session = Depends(get_db)):
     """Health check endpoint"""
     try:
-        # Check database
         db.execute("SELECT 1")
         db_status = "healthy"
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
     
-    # Check Gemini API (simple validation)
     gemini_status = "configured" if settings.GEMINI_API_KEY else "not configured"
     
     return schemas.HealthResponse(
@@ -97,6 +99,40 @@ async def health_check(db: Session = Depends(get_db)):
         gemini_api=gemini_status,
         timestamp=datetime.now()
     )
+    
+@app.get("/api/v1/gemini/models")
+async def list_gemini_models():
+    """List available Gemini models for current API key"""
+    import google.generativeai as genai
+    from app.config import settings
+    
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(status_code=400, detail="Gemini API key not configured")
+    
+    try:
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        models = genai.list_models()
+        
+        available_models = []
+        for model in models:
+            # Filter for models that support generateContent
+            if 'generateContent' in model.supported_generation_methods:
+                available_models.append({
+                    'name': model.name,
+                    'display_name': model.display_name,
+                    'description': model.description,
+                    'input_token_limit': model.input_token_limit,
+                    'output_token_limit': getattr(model, 'output_token_limit', None)
+                })
+        
+        return {
+            'total': len(available_models),
+            'models': available_models,
+            'current_model': settings.GEMINI_MODEL
+        }
+    except Exception as e:
+        logger.error(f"Error listing models: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============== News CRUD Endpoints ==============
@@ -118,7 +154,6 @@ async def get_news(
         query = query.filter(models.News.source == source)
     
     if symbols:
-        # Filter by any of the symbols
         symbol_list = symbols.split(',')
         filters = [models.News.related_symbols.contains(s.strip()) for s in symbol_list]
         query = query.filter(db.or_(*filters))
@@ -156,30 +191,41 @@ async def get_news_by_id(news_id: int, db: Session = Depends(get_db)):
 async def crawl_url(request: schemas.CrawlRequest, db: Session = Depends(get_db)):
     """
     Manually trigger crawl for a specific URL
-    TODO: Implement crawler logic in next step
+    Uses hybrid parsing: Rule-based → Gemini AI fallback
     """
-    logger.info(f"Crawl request received: {request.url}")
+    logger.info(f"📨 Crawl request received: {request.url}")
     
-    # Check if URL already exists
-    existing = db.query(models.News).filter(models.News.url == request.url).first()
-    if existing:
-        return schemas.CrawlJobResponse(
-            status="skipped",
-            message="URL already crawled",
-            news_id=existing.id
+    try:
+        result = await crawler_service.crawl_and_save(
+            url=request.url,
+            source=request.source,
+            db=db,
+            force_gemini=request.force_gemini
         )
-    
-    return schemas.CrawlJobResponse(
-        status="pending",
-        message="Crawler logic will be implemented in next step"
-    )
+        
+        return schemas.CrawlJobResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Crawl endpoint error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/v1/sources")
 async def get_sources(db: Session = Depends(get_db)):
     """Get list of available news sources"""
-    sources = db.query(models.News.source).distinct().all()
-    return {"sources": [s[0] for s in sources]}
+    # Get sources from database
+    db_sources = db.query(models.News.source).distinct().all()
+    db_sources = [s[0] for s in db_sources]
+    
+    # Get configured sources
+    configured_sources = get_all_sources()
+    
+    return {
+        "configured_sources": configured_sources,
+        "active_sources": db_sources,
+        "total_configured": len(configured_sources),
+        "total_active": len(db_sources)
+    }
 
 
 @app.get("/")
@@ -189,7 +235,12 @@ async def root():
         "service": settings.SERVICE_NAME,
         "version": "1.0.0",
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
+        "features": {
+            "hybrid_parsing": True,
+            "gemini_ai": settings.USE_GEMINI_FALLBACK,
+            "scheduler": settings.ENABLE_SCHEDULER
+        }
     }
 
 

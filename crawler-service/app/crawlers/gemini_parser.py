@@ -16,8 +16,14 @@ class GeminiParser(BaseCrawler):
     def __init__(self):
         super().__init__()
         # Configure Gemini
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
+        if not settings.GEMINI_API_KEY:
+            logger.warning("⚠️ Gemini API key not configured!")
+            self.model = None
+        else:
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
+            logger.info(f"Using Gemini model: {settings.GEMINI_MODEL}")
+            logger.info("✅ Gemini API initialized")
     
     def parse_article(self, url: str, source: str, html: Optional[str] = None) -> Optional[Dict]:
         """
@@ -31,6 +37,12 @@ class GeminiParser(BaseCrawler):
         Returns:
             Dict with extracted data or None if parsing failed
         """
+        if not self.model:
+            logger.error("Gemini model not initialized - API key missing")
+            return None
+        else:
+            logger.info(f"Using Gemini model: {self.model}")
+            
         try:
             # Fetch HTML if not provided
             if not html:

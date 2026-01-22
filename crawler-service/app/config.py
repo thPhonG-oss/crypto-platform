@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     # Gemini AI
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-pro"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
     
     # Service
     SERVICE_NAME: str = "crawler-service"
