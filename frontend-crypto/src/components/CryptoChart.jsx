@@ -68,11 +68,7 @@ const CryptoChart = ({ symbol = "BTCUSDT" }) => {
 
     // 3. Kết nối WebSocket nhận giá Real-time
     const socket = new SockJS("http://localhost:8080/market-service/ws");
-    const stompClient = new Stomp.Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-    });
-
+    const stompClient = Stomp.over(socket);
 
     // Tắt log debug của Stomp cho đỡ rối console
     stompClient.debug = () => {};
@@ -111,7 +107,7 @@ const CryptoChart = ({ symbol = "BTCUSDT" }) => {
     return () => {
       chart.remove();
       if (stompClient && stompClient.connected) {
-        stompClient.deactivate();
+        stompClient.disconnect();
       }
     };
   }, [symbol]); // Chạy lại effect nếu đổi symbol (VD: BTC -> ETH)
