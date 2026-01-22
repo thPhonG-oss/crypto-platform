@@ -61,6 +61,7 @@ services:
     build: ./market-service
     container_name: market-service
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/crypto_core
       - SPRING_DATASOURCE_USERNAME=admin
