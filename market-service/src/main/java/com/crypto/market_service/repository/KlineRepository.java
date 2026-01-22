@@ -9,6 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface KlineRepository extends JpaRepository<Kline, Long> {
-    Optional<Kline> findBySymbolAndOpenTime(String symbol, LocalDateTime openTime);
+    Optional<Kline> findBySymbolAndIntervalAndOpenTime(String symbol, String interval, LocalDateTime openTime);
     List<Kline> findBySymbolOrderByCloseTimeDesc(String symbol, Pageable pageable);
 }

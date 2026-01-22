@@ -54,8 +54,10 @@ public class RedisSubscriber {
             long openTimeLong = k.get("t").asLong();
             LocalDateTime openTime = Kline.convertTime(openTimeLong);
 
+            String interval = k.has("i") ? k.get("i").asText() : "1m";
+
             // Kiểm tra xem nến này đã tồn tại chưa để update
-            Optional<Kline> existing = klineRepository.findBySymbolAndOpenTime(symbol, openTime);
+            Optional<Kline> existing = klineRepository.findBySymbolAndIntervalAndOpenTime(symbol, interval, openTime);
 
             Kline kline = existing.orElse(new Kline());
             kline.setSymbol(symbol);
@@ -66,6 +68,7 @@ public class RedisSubscriber {
             kline.setLowPrice(new BigDecimal(k.get("l").asText()));
             kline.setClosePrice(new BigDecimal(k.get("c").asText()));
             kline.setVolume(new BigDecimal(k.get("v").asText()));
+            kline.setInterval(interval);
 
             klineRepository.save(kline);
 

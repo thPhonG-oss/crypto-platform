@@ -10,7 +10,7 @@ import java.time.ZoneId;
 
 @Entity
 @Table(name = "klines", indexes = {
-        @Index(name = "idx_symbol_open_time", columnList = "symbol, openTime")
+    @Index(name = "idx_kline_unique", columnList = "symbol, interval, openTime", unique = true)
 })
 @Data
 @Builder
