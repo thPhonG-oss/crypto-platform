@@ -68,6 +68,7 @@ class GeminiParser(BaseCrawler):
             # Call Gemini API
             logger.info(f"🤖 Calling Gemini API for {url}")
             response = self.model.generate_content(prompt)
+            logger.info(f"Gemini response: {response.text}")
             
             # Parse JSON response
             result = self._parse_gemini_response(response.text, url, source)
@@ -87,16 +88,17 @@ class GeminiParser(BaseCrawler):
         """Create structured extraction prompt for Gemini"""
         return f"""You are a professional news article extractor. Extract information from this HTML page.
 
-**STRICT REQUIREMENTS:**
+**CRITICAL REQUIREMENTS:**
 1. Return ONLY a valid JSON object (no markdown, no explanation)
-2. Extract the main article content, not ads or sidebars
-3. If you cannot find a field, use null (not empty string)
-4. For date: try to parse into ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
+2. Extract the main article content - this is MANDATORY, content CANNOT be null
+3. Content must be the full article text, not just a summary
+4. Extract from the main article body, ignore ads, navigation, sidebars, comments
+5. If you cannot find a field, use null (EXCEPT for content - content is REQUIRED)
+6. For date: try to parse into ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
 
 **HTML Content:**
-```html
 {html}
-```
+
 
 **Extract these fields as JSON:**
 {{
@@ -131,6 +133,9 @@ Return JSON only:"""
             
             # Parse JSON
             data = json.loads(response_text)
+            logger.debug(f"Parsed JSON keys: {list(data.keys())}")
+            logger.debug(f"Title present: {bool(data.get('title'))}")
+            logger.debug(f"Content present: {bool(data.get('content'))}")
             
             # Validate required fields
             if not data.get('title') or not data.get('content'):
