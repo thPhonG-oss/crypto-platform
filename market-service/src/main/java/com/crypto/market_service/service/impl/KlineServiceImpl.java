@@ -22,12 +22,12 @@ public class KlineServiceImpl implements KlineService {
     KlineRepository klineRepository;
 
     @Override
-    public List<Kline> getKlines(String symbol, int limit) {
+    public List<Kline> getKlines(String symbol, String interval, int limit) {
         // Tạo Pageable để lấy 'limit' dòng đầu tiên
         Pageable pageable = PageRequest.of(0, limit);
 
         // Lấy dữ liệu từ DB (Đang xếp từ Mới -> Cũ)
-        List<Kline> klines = klineRepository.findBySymbolOrderByCloseTimeDesc(symbol.toUpperCase(), pageable);
+        List<Kline> klines = klineRepository.findBySymbolAndIntervalOrderByCloseTimeDesc(symbol.toUpperCase(), interval, pageable);
 
         // Đảo ngược lại danh sách (thành Cũ -> Mới) để Frontend vẽ từ trái sang phải
         Collections.reverse(klines);
