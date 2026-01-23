@@ -69,12 +69,14 @@ class NewsScheduler:
                 # Crawl each article
                 for article in articles:
                     try:
-                        result = self.crawler_service.crawl_and_save(
+                        # Fix: Run async method synchronously
+                        import asyncio
+                        result = asyncio.run(self.crawler_service.crawl_and_save(
                             url=article['link'],
                             source=source,
                             db=db,
                             force_gemini=False  # Try rules first
-                        )
+                        ))
                         
                         if result['status'] == 'success':
                             total_crawled += 1
