@@ -25,3 +25,8 @@ logs/
 # Model cache
 .cache/
 models/
+
+
+.env.dev
+.env
+.env.docker
