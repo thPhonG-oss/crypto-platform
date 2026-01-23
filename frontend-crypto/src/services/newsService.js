@@ -63,6 +63,33 @@ const newsService = {
    */
   async getNews(params = {}) {
     try {
+      // Use Analysis Service for reading news (includes sentiment)
+      // Note: Analysis Service returns { news: [], total: ... }
+      // The frontend expects { items: [], total: ... }
+
+      const analysisUrl = `${CONFIG.API.ANALYSIS_SERVICE}/api/v1/news`;
+      const response = await axios.get(analysisUrl, { params });
+
+      return {
+        items: response.data.news || [],
+        total: response.data.total || 0,
+        offset: response.data.offset || 0,
+        limit: response.data.limit || 0,
+      };
+    } catch (error) {
+      // Fallback to Crawler Service if Analysis Service is down?
+      // For now, let's just fail or could try:
+      // console.warn("Analysis service failed, falling back to crawler...");
+      // return this.getRawNews(params);
+      throw this._handleError(error);
+    }
+  },
+
+  /**
+   * Get raw news from crawler service (fallback)
+   */
+  async getRawNews(params = {}) {
+    try {
       const response = await apiClient.get("/news", { params });
       return response.data;
     } catch (error) {

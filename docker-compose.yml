@@ -101,6 +101,30 @@ services:
       discovery-service:
         condition: service_healthy
 
+  # 7. Analysis Service (AI Sentiment Analysis)
+  analysis-service:
+    build: ./analysis-service
+    container_name: analysis-service
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@timescaledb:5432/crypto_core
+      - EUREKA_SERVER=http://discovery-service:8761/eureka/
+      - SERVICE_NAME=analysis-service
+      - SERVICE_PORT=8002
+      - HOSTNAME=analysis-service
+      - USE_FINBERT=true
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENABLE_SCHEDULER=true
+      - BATCH_SIZE=50
+    ports:
+      - "8002:8002"
+    networks:
+      - crypto-net
+    depends_on:
+      timescaledb:
+        condition: service_started
+      discovery-service:
+        condition: service_healthy
+
 volumes:
   timescaledb_data:
 

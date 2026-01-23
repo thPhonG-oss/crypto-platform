@@ -9,6 +9,7 @@ export const CONFIG = {
     GATEWAY: API_GATEWAY_URL,
     MARKET_SERVICE: `${API_GATEWAY_URL}/market-service`,
     CRAWLER_SERVICE: `${API_GATEWAY_URL}/crawler-service`,
+    ANALYSIS_SERVICE: `${API_GATEWAY_URL}/analysis-service`,
   },
   WS: {
     MARKET: `ws://localhost:8080/market-service/ws`,

@@ -4,7 +4,7 @@ import NewsPanel from "./components/NewsPanel";
 import CryptoChart from "./components/CryptoChart";
 import { CONFIG } from "./config";
 import { checkServiceHealth } from "./utils/helper";
-import { Activity, Server, Database, Globe } from "lucide-react";
+import { Activity, Server, Database, Globe, Sparkles } from "lucide-react";
 
 const AVAILABLE_SYMBOLS = [
   { symbol: "BTCUSDT", name: "Bitcoin" },
@@ -30,6 +30,7 @@ function App() {
     gateway: false,
     market: false,
     crawler: false,
+    analysis: false,
   });
 
   // Check system health on mount
@@ -43,11 +44,13 @@ function App() {
       );
       // Crawler service has a custom /health endpoint, others use Spring Actuator
       const crawler = await checkServiceHealth(CONFIG.API.CRAWLER_SERVICE);
+      const analysis = await checkServiceHealth(CONFIG.API.ANALYSIS_SERVICE);
 
       setSystemStatus({
         gateway,
         market,
         crawler,
+        analysis,
       });
     };
 
@@ -194,7 +197,7 @@ function App() {
         </main>
 
         {/* System Status Footer */}
-        <footer className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-8 border-t border-gray-800/50">
+        <footer className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-8 border-t border-gray-800/50">
           <StatCard
             title="Gateway"
             value={systemStatus.gateway ? "Online" : "Connecting..."}
@@ -208,11 +211,18 @@ function App() {
             icon={<Activity className="w-4 h-4" />}
           />
           <StatCard
-            title="AI Crawler"
-            value={systemStatus.crawler ? "Active" : "Services Starting"}
+            title="Crawler"
+            value={systemStatus.crawler ? "Active" : "Starting"}
             status={systemStatus.crawler ? "success" : "warning"}
             icon={<Server className="w-4 h-4" />}
             animate={systemStatus.crawler}
+          />
+          <StatCard
+            title="AI Analysis"
+            value={systemStatus.analysis ? "Online" : "Offline"}
+            status={systemStatus.analysis ? "success" : "error"}
+            icon={<Sparkles className="w-4 h-4" />}
+            animate={systemStatus.analysis}
           />
           <StatCard
             title="Database"
