@@ -6,15 +6,15 @@ spring:
     name: gateway-service
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       globalcors:
         cors-configurations:
-          "[/**]": # Áp dụng cho mọi đường dẫn
-            allowedOrigins: "*" # Allow all origins
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
+          "[/**]":
+            allowedOrigins: "*"
+            allowedMethods: "*"
             allowedHeaders: "*"
-            allowCredentials: true
