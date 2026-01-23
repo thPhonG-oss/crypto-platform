@@ -47,3 +47,29 @@ class News(Base):
     
     def __repr__(self):
         return f"<News(id={self.id}, title='{self.title[:50]}...', source='{self.source}')>"
+
+
+class GeminiUsage(Base):
+    """
+    Model for tracking Gemini API usage and costs
+    """
+    __tablename__ = "gemini_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint = Column(String(50), index=True) # e.g., "generate_content"
+    model_name = Column(String(50)) # e.g., "gemini-pro"
+    
+    # Token usage
+    prompt_tokens = Column(Integer, default=0)
+    completion_tokens = Column(Integer, default=0)
+    total_tokens = Column(Integer, default=0)
+    
+    # Request details
+    status = Column(String(20)) # "success", "error"
+    error_message = Column(Text, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    def __repr__(self):
+        return f"<GeminiUsage(id={self.id}, model='{self.model_name}', tokens={self.total_tokens})>"

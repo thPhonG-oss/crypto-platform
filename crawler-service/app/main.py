@@ -4,6 +4,7 @@ import py_eureka_client.eureka_client as eureka_client
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import datetime
 from typing import List, Optional
 
@@ -173,7 +174,46 @@ async def list_gemini_models():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v1/gemini/usage", response_model=List[schemas.GeminiUsageResponse])
+async def get_gemini_usage(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """Get Gemini API usage history"""
+    usage = db.query(models.GeminiUsage)\
+        .order_by(models.GeminiUsage.created_at.desc())\
+        .offset(offset)\
+        .limit(limit)\
+        .all()
+    return usage
+
+
+@app.get("/api/v1/gemini/stats", response_model=schemas.GeminiUsageStats)
+async def get_gemini_stats(db: Session = Depends(get_db)):
+    """Get aggregate Gemini usage statistics"""
+    total_requests = db.query(models.GeminiUsage).count()
+    total_tokens = db.query(func.sum(models.GeminiUsage.total_tokens)).scalar() or 0
+    prompt_tokens = db.query(func.sum(models.GeminiUsage.prompt_tokens)).scalar() or 0
+    completion_tokens = db.query(func.sum(models.GeminiUsage.completion_tokens)).scalar() or 0
+    
+    success_count = db.query(models.GeminiUsage).filter(models.GeminiUsage.status == "success").count()
+    success_rate = (success_count / total_requests * 100) if total_requests > 0 else 0.0
+    
+    return schemas.GeminiUsageStats(
+        total_requests=total_requests,
+        total_tokens=total_tokens,
+        total_prompt_tokens=prompt_tokens,
+        total_completion_tokens=completion_tokens,
+        success_rate=round(success_rate, 2)
+    )
+
+
 # ============== News CRUD Endpoints ==============
+
+from sqlalchemy import or_
+
+# ... (imports)
 
 @app.get("/api/v1/news", response_model=schemas.NewsListResponse)
 async def get_news(
@@ -192,8 +232,9 @@ async def get_news(
     
     if symbols:
         symbol_list = symbols.split(',')
+        # Use imported or_ instead of db.or_
         filters = [models.News.related_symbols.contains(s.strip()) for s in symbol_list]
-        query = query.filter(db.or_(*filters))
+        query = query.filter(or_(*filters))
     
     if from_date:
         query = query.filter(models.News.published_at >= from_date)

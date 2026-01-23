@@ -70,7 +70,7 @@ class CrawlerService:
             # Strategy 2: Fallback to Gemini AI
             if not parsed_data and settings.USE_GEMINI_FALLBACK:
                 logger.info(f"🤖 Using Gemini AI parser for {url}")
-                parsed_data = self.gemini_parser.parse_article(url, source)
+                parsed_data = self.gemini_parser.parse_article(url, source, db=db)
                 
                 if parsed_data:
                     parse_method = 'gemini'

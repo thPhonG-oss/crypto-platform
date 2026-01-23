@@ -4,13 +4,14 @@
  */
 
 import axios from "axios";
+import { CONFIG } from "../config";
 
-const BASE_URL = "http://localhost:8080/crawler-service/api/v1";
+const BASE_URL = `${CONFIG.API.CRAWLER_SERVICE}/api/v1`;
 
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000, // 10 seconds
+  timeout: CONFIG.TIMEOUT,
   headers: {
     "Content-Type": "application/json",
   },

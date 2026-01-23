@@ -80,3 +80,31 @@ class HealthResponse(BaseModel):
     database: str
     gemini_api: str
     timestamp: datetime
+
+
+# ============== Gemini Usage Schemas ==============
+
+class GeminiUsageBase(BaseModel):
+    endpoint: str
+    model_name: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    status: str
+    error_message: Optional[str] = None
+
+
+class GeminiUsageResponse(GeminiUsageBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class GeminiUsageStats(BaseModel):
+    total_requests: int
+    total_tokens: int
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    success_rate: float

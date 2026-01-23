@@ -5,6 +5,8 @@ from datetime import datetime
 from loguru import logger
 from app.config import settings
 from app.crawlers.base_crawler import BaseCrawler
+from sqlalchemy.orm import Session
+from app import models
 
 
 class GeminiParser(BaseCrawler):
@@ -25,7 +27,7 @@ class GeminiParser(BaseCrawler):
             logger.info(f"Using Gemini model: {settings.GEMINI_MODEL}")
             logger.info("✅ Gemini API initialized")
     
-    def parse_article(self, url: str, source: str, html: Optional[str] = None) -> Optional[Dict]:
+    def parse_article(self, url: str, source: str, html: Optional[str] = None, db: Session = None) -> Optional[Dict]:
         """
         Parse article using Gemini AI
         
@@ -33,6 +35,7 @@ class GeminiParser(BaseCrawler):
             url: Article URL
             source: Source name
             html: Optional pre-fetched HTML (to save bandwidth)
+            db: Database session for usage tracking
             
         Returns:
             Dict with extracted data or None if parsing failed
@@ -68,7 +71,11 @@ class GeminiParser(BaseCrawler):
             # Call Gemini API
             logger.info(f"🤖 Calling Gemini API for {url}")
             response = self.model.generate_content(prompt)
-            logger.info(f"Gemini response: {response.text}")
+            logger.info(f"Gemini response length: {len(response.text)}")
+            
+            # Track usage
+            if db:
+                self._track_usage(db, response, "parse_article")
             
             # Parse JSON response
             result = self._parse_gemini_response(response.text, url, source)
@@ -82,7 +89,38 @@ class GeminiParser(BaseCrawler):
                 
         except Exception as e:
             logger.error(f"❌ Gemini parsing error for {url}: {str(e)}")
+            # Track error if db is available
+            if db:
+                try:
+                    usage_record = models.GeminiUsage(
+                        endpoint="parse_article",
+                        model_name=settings.GEMINI_MODEL,
+                        status="error",
+                        error_message=str(e)[:500]
+                    )
+                    db.add(usage_record)
+                    db.commit()
+                except Exception as db_e:
+                    logger.error(f"Failed to track Gemini error usage: {db_e}")
             return None
+    
+    def _track_usage(self, db: Session, response, endpoint: str):
+        """Track Gemini API usage"""
+        try:
+            usage = response.usage_metadata
+            usage_record = models.GeminiUsage(
+                endpoint=endpoint,
+                model_name=settings.GEMINI_MODEL,
+                prompt_tokens=usage.prompt_token_count,
+                completion_tokens=usage.candidates_token_count,
+                total_tokens=usage.total_token_count,
+                status="success"
+            )
+            db.add(usage_record)
+            db.commit()
+            logger.info(f"📊 Tracked Gemini usage: {usage.total_token_count} tokens")
+        except Exception as e:
+            logger.error(f"Failed to track Gemini usage: {e}")
     
     def _create_extraction_prompt(self, html: str, url: str, source: str) -> str:
         """Create structured extraction prompt for Gemini"""
