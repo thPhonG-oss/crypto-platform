@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://timescaledb:5432/crypto_core
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+  instance:
+    hostname: ${HOSTNAME:market-service}
+
+logging:
+  level:
+    com.crypto: INFO

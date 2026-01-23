@@ -1,16 +1,10 @@
 server:
-  port: 0
+  port: 0  # Random port cho load balancing
 
 spring:
   application:
     name: market-service
-  datasource:
-    # Nếu chạy Local (IntelliJ), dùng localhost. Nếu chạy Docker toàn bộ, đổi thành 'timescaledb'
-    url: jdbc:postgresql://localhost:5432/crypto_core
-    username: admin
-    password: admin
-    driver-class-name: org.postgresql.Driver
-
+  
   jpa:
     hibernate:
       ddl-auto: update
@@ -19,18 +13,12 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-  data:
-    redis:
-      host: localhost # Lưu ý: Khi chạy Docker thì đổi thành 'redis'
-      port: 6379
 
 app:
   binance:
     symbols: btcusdt,ethusdt,bnbusdt,solusdt
     intervals: 1m,5m,15m,1h,4h,1d
+
 eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true

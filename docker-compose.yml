@@ -26,7 +26,7 @@ services:
     networks:
       - crypto-net
 
-  # 3. TimescaleDB (Lưu giá lịch sử)
+  # 3. TimescaleDB (Shared Database)
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: crypto_timescaledb
@@ -48,6 +48,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_REDIS_HOST=redis
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
     networks:
@@ -61,6 +62,7 @@ services:
     build: ./market-service
     container_name: market-service
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/crypto_core
       - SPRING_DATASOURCE_USERNAME=admin
@@ -69,11 +71,32 @@ services:
       - APP_BINANCE_SYMBOLS=btcusdt,ethusdt,bnbusdt,solusdt
     networks:
       - crypto-net
-    # SỬA LỖI TẠI ĐÂY: Chuyển hết sang dạng key-value
     depends_on:
       timescaledb:
         condition: service_started
       redis:
+        condition: service_started
+      discovery-service:
+        condition: service_healthy
+
+  # 6. Crawler Service (NEW)
+  crawler-service:
+    build: ./crawler-service
+    container_name: crawler-service
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@timescaledb:5432/crypto_core
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EUREKA_SERVER=http://discovery-service:8761/eureka/
+      - SERVICE_NAME=crawler-service
+      - SERVICE_PORT=8000
+      - ENABLE_SCHEDULER=true
+      - HOSTNAME=crawler-service
+    ports:
+      - "8001:8000"
+    networks:
+      - crypto-net
+    depends_on:
+      timescaledb:
         condition: service_started
       discovery-service:
         condition: service_healthy

@@ -1,0 +1,14 @@
+.env
+.env.docker
+.env.dev
+__pycache__
+
+
+# Logs
+*.log
+
+# IDE
+.idea
+.vscode
+
+venv/

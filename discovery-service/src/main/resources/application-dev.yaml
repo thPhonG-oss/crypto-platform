@@ -1,0 +1,24 @@
+# Development-specific config
+logging:
+  level:
+    com.netflix.eureka: DEBUG
+    com.netflix.discovery: DEBUG
+    org.springframework.cloud: DEBUG
+
+eureka:
+  server:
+    # Dev: Tắt self-preservation để test dễ dàng
+    enable-self-preservation: false
+    # Dev: Xóa service chết nhanh hơn (5s)
+    eviction-interval-timer-in-ms: 5000
+  
+  instance:
+    # Dev: Heartbeat nhanh hơn để test
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+
+# Dev: Hiển thị debug info
+management:
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,29 @@
+# Docker/Production config
+logging:
+  level:
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO
+    org.springframework.cloud: INFO
+
+eureka:
+  server:
+    # Docker: Có thể bật self-preservation cho production
+    enable-self-preservation: false
+    # Docker: Evict chậm hơn một chút
+    eviction-interval-timer-in-ms: 10000
+  
+  instance:
+    # Docker: Heartbeat thời gian chuẩn
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+    
+    # Docker: Prefer IP thay vì hostname
+    prefer-ip-address: true
+    
+    # Docker: Hostname của container
+    hostname: ${HOSTNAME:discovery-service}
+
+management:
+  endpoint:
+    health:
+      show-details: when_authorized
