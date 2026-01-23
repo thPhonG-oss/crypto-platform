@@ -15,7 +15,7 @@ from app.crawlers.sources import get_all_sources
 from app.scheduler import NewsScheduler
 from loguru import logger
 
-EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://discovery-service:8761/eureka/")
+EUREKA_SERVER = settings.EUREKA_SERVER or "http://discovery-service:8761/eureka/"
 SERVICE_PORT = settings.SERVICE_PORT
 SERVICE_NAME = settings.SERVICE_NAME
 
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
         eureka_server=EUREKA_SERVER,
         app_name=SERVICE_NAME,
         instance_port=SERVICE_PORT,
-        instance_host=os.getenv("HOSTNAME", SERVICE_NAME)
+        instance_host=settings.HOSTNAME
     )
     logger.info("✅ Eureka registration successful!")
     

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { createChart, ColorType, CandlestickSeries } from "lightweight-charts";
 import axios from "axios";
 import SockJS from "socketjs-client";
-import { Stomp } from "@stomp/stompjs";
+import { Client } from "@stomp/stompjs";
 
 const CryptoChart = ({ symbol = "BTCUSDT" }) => {
   const chartContainerRef = useRef();
@@ -67,47 +67,44 @@ const CryptoChart = ({ symbol = "BTCUSDT" }) => {
     fetchHistory();
 
     // 3. Kết nối WebSocket nhận giá Real-time
-    const socket = new SockJS("http://localhost:8080/market-service/ws");
-    const stompClient = Stomp.over(socket);
-
-    // Tắt log debug của Stomp cho đỡ rối console
-    stompClient.debug = () => {};
-
-    stompClient.connect(
-      {},
-      () => {
+    const client = new Client({
+      brokerURL: "ws://localhost:8080/market-service/ws",
+      // Dùng SockJS làm fallback (do vite polyfill global đã fix lỗi sockjs)
+      webSocketFactory: () =>
+        new SockJS("http://localhost:8080/market-service/ws"),
+      debug: () => {
+        // console.log(str);
+      },
+      onConnect: () => {
         console.log(`Connected to WebSocket for ${symbol}`);
 
-        // Subscribe vào topic của cặp tiền tương ứng
-        stompClient.subscribe(
-          `/topic/market/${symbol.toLowerCase()}`,
-          (message) => {
-            const kline = JSON.parse(message.body);
+        client.subscribe(`/topic/market/${symbol.toLowerCase()}`, (message) => {
+          const kline = JSON.parse(message.body);
 
-            // Update cây nến hiện tại
-            const candle = {
-              time: new Date(kline.openTime).getTime() / 1000,
-              open: kline.openPrice,
-              high: kline.highPrice,
-              low: kline.lowPrice,
-              close: kline.closePrice,
-            };
+          const candle = {
+            time: new Date(kline.openTime).getTime() / 1000,
+            open: kline.openPrice,
+            high: kline.highPrice,
+            low: kline.lowPrice,
+            close: kline.closePrice,
+          };
 
-            // Hàm update tự động nối thêm nến mới hoặc cập nhật nến đang chạy
-            candlestickSeries.update(candle);
-          },
-        );
+          candlestickSeries.update(candle);
+        });
       },
-      (error) => {
-        console.error("Lỗi WebSocket:", error);
+      onStompError: (frame) => {
+        console.error("Broker reported error: " + frame.headers["message"]);
+        console.error("Additional details: " + frame.body);
       },
-    );
+    });
+
+    client.activate();
 
     // Cleanup khi component bị hủy (người dùng chuyển trang)
     return () => {
       chart.remove();
-      if (stompClient && stompClient.connected) {
-        stompClient.disconnect();
+      if (client) {
+        client.deactivate();
       }
     };
   }, [symbol]); // Chạy lại effect nếu đổi symbol (VD: BTC -> ETH)

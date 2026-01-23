@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # Service
     SERVICE_NAME: str = "crawler-service"
     SERVICE_PORT: int = 8000
+    HOSTNAME: str = "localhost"
     
     # Eureka (Optional)
     EUREKA_SERVER: Optional[str] = None
