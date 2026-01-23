@@ -6,22 +6,15 @@ spring:
     name: gateway-service
   cloud:
     gateway:
-      server:
-        webflux:
-          discovery:
-            locator:
-              lower-case-service-id: true
-              enabled: true
-          globals:
-            cors-configurations:
-              '[/**]':
-                          allowedOrigins: "*"
-                          allowedMethods:
-                            - GET
-                            - POST
-                            - PUT
-                            - DELETE
-                            - OPTIONS
-                          allowedHeaders:
-                            - "*"
-                          allowCredentials: false
+      globalcors:
+        cors-configurations:
+          "[/**]": # Áp dụng cho mọi đường dẫn
+            allowedOrigins: "*" # Allow all origins
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
