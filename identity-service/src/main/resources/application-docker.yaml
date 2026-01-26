@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://timescaledb:5432/crypto_core
+    username: admin
+    password: admin
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: "http://localhost:8080/identity-service/login/oauth2/code/{registrationId}"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+  instance:
+    hostname: ${HOSTNAME:identity-service}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:144d4f116a209df65fbaa61977a95a74e0657fc7eeccb0aeec76d364c4e6759f}
+    access-token-expiration: 900000 # 15 minutes
+    refresh-token-expiration: 604800000 # 7 days
+  vnpay:
+    return-url: http://localhost:8080/identity-service/api/v1/payments/vnpay-return
+
+logging:
+  level:
+    com.crypto: INFO
