@@ -7,8 +7,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentResponse {
-    private String orderId;
-    private String paymentUrl;
-    private java.math.BigDecimal amount;
-    private String packageType;
+  private String orderId;
+  private String paymentUrl;
+  private java.math.BigDecimal amount;
+  private String packageType;
 }

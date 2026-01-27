@@ -7,8 +7,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentStatusResponse {
-    private String orderId;
-    private String status;
-    private java.math.BigDecimal amount;
-    private java.time.LocalDateTime completedAt;
+  private String orderId;
+  private String status;
+  private java.math.BigDecimal amount;
+  private java.time.LocalDateTime completedAt;
 }

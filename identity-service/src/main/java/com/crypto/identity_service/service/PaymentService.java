@@ -7,7 +7,9 @@ import com.crypto.identity_service.dto.response.PaymentStatusResponse;
 import java.util.Map;
 
 public interface PaymentService {
-    PaymentResponse createPayment(String email, PaymentRequest request, String ipAddress);
-    PaymentStatusResponse handleVnpayReturn(Map<String, String> params);
-    PaymentHistoryResponse getPaymentHistory(String email);
+  PaymentResponse createPayment(String email, PaymentRequest request, String ipAddress);
+
+  PaymentStatusResponse handleVnpayReturn(Map<String, String> params);
+
+  PaymentHistoryResponse getPaymentHistory(String email);
 }
