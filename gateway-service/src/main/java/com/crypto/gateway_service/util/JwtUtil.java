@@ -39,15 +39,30 @@ public class JwtUtil {
      */
     public boolean validateToken(String token) {
         try {
-            log.debug("Validating token (first 20 chars): {}", token.substring(0, Math.min(20, token.length())));
-            Jwts.parser()
+            log.info("=== JWT VALIDATION START ===");
+            log.info("Token (first 50 chars): {}", token.substring(0, Math.min(50, token.length())));
+            log.info("Secret used (first 20 chars): {}", jwtSecret.substring(0, Math.min(20, jwtSecret.length())));
+            
+            Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
-                .parseSignedClaims(token);
-            log.debug("Token validation successful");
+                .parseSignedClaims(token)
+                .getPayload();
+            
+            log.info("Token claims - sub: {}, userId: {}, role: {}, type: {}", 
+                claims.getSubject(), claims.get("userId"), claims.get("role"), claims.get("type"));
+            log.info("Token exp: {}, iat: {}, current: {}", 
+                claims.getExpiration(), claims.getIssuedAt(), new Date());
+            log.info("=== JWT VALIDATION SUCCESS ===");
             return true;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            log.error("=== JWT EXPIRED === exp: {}, current: {}", e.getClaims().getExpiration(), new Date());
+            return false;
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            log.error("=== JWT SIGNATURE MISMATCH === message: {}", e.getMessage());
+            return false;
         } catch (JwtException | IllegalArgumentException e) {
-            log.error("JWT validation failed: {} - Token preview: {}", e.getMessage(), token.substring(0, Math.min(50, token.length())));
+            log.error("=== JWT VALIDATION FAILED === type: {}, message: {}", e.getClass().getSimpleName(), e.getMessage());
             return false;
         }
     }

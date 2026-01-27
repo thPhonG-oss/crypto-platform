@@ -30,6 +30,14 @@ public class JwtTokenProvider {
   @Value("${app.jwt.refresh-token-expiration}")
   private long refreshTokenExpiration; // 7 days
 
+  @jakarta.annotation.PostConstruct
+  public void init() {
+    log.info("=== IDENTITY-SERVICE JwtTokenProvider initialized ===");
+    log.info(
+        "JWT Secret (first 20 chars): {}",
+        jwtSecret != null ? jwtSecret.substring(0, Math.min(20, jwtSecret.length())) : "NULL");
+  }
+
   private SecretKey getSigningKey() {
     return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
   }
