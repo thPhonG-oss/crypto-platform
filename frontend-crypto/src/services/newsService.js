@@ -3,49 +3,11 @@
  * Base URL: http://localhost:8080/crawler-service/api/v1
  */
 
-import axios from "axios";
+import apiClient from "./apiClient";
 import { CONFIG } from "../config";
 
-const BASE_URL = `${CONFIG.API.CRAWLER_SERVICE}/api/v1`;
-
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: BASE_URL,
-  timeout: CONFIG.TIMEOUT,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add request interceptor for debugging
-apiClient.interceptors.request.use(
-  (config) => {
-    console.log(
-      `[API Request] ${config.method?.toUpperCase()} ${config.url}`,
-      config.params,
-    );
-    return config;
-  },
-  (error) => {
-    console.error("[API Request Error]", error);
-    return Promise.reject(error);
-  },
-);
-
-// Add response interceptor for error handling
-apiClient.interceptors.response.use(
-  (response) => {
-    console.log(`[API Response] ${response.config.url}`, response.data);
-    return response;
-  },
-  (error) => {
-    console.error(
-      "[API Response Error]",
-      error.response?.data || error.message,
-    );
-    return Promise.reject(error);
-  },
-);
+const CRAWLER_BASE = "/crawler-service/api/v1";
+const ANALYSIS_BASE = "/analysis-service/api/v1";
 
 /**
  * News Service Object
@@ -67,8 +29,7 @@ const newsService = {
       // Note: Analysis Service returns { news: [], total: ... }
       // The frontend expects { items: [], total: ... }
 
-      const analysisUrl = `${CONFIG.API.ANALYSIS_SERVICE}/api/v1/news`;
-      const response = await axios.get(analysisUrl, { params });
+      const response = await apiClient.get(`${ANALYSIS_BASE}/news`, { params });
 
       return {
         items: response.data.news || [],
@@ -77,11 +38,13 @@ const newsService = {
         limit: response.data.limit || 0,
       };
     } catch (error) {
-      // Fallback to Crawler Service if Analysis Service is down?
-      // For now, let's just fail or could try:
-      // console.warn("Analysis service failed, falling back to crawler...");
-      // return this.getRawNews(params);
-      throw this._handleError(error);
+      // Fallback to Crawler Service if Analysis Service is down
+      console.warn("Analysis service failed, falling back to crawler...");
+      try {
+        return await this.getRawNews(params);
+      } catch (fallbackError) {
+        throw this._handleError(error);
+      }
     }
   },
 
@@ -90,7 +53,7 @@ const newsService = {
    */
   async getRawNews(params = {}) {
     try {
-      const response = await apiClient.get("/news", { params });
+      const response = await apiClient.get(`${CRAWLER_BASE}/news`, { params });
       return response.data;
     } catch (error) {
       throw this._handleError(error);
@@ -104,7 +67,7 @@ const newsService = {
    */
   async getNewsById(newsId) {
     try {
-      const response = await apiClient.get(`/news/${newsId}`);
+      const response = await apiClient.get(`${CRAWLER_BASE}/news/${newsId}`);
       return response.data;
     } catch (error) {
       throw this._handleError(error);
@@ -117,7 +80,7 @@ const newsService = {
    */
   async getSources() {
     try {
-      const response = await apiClient.get("/sources");
+      const response = await apiClient.get(`${CRAWLER_BASE}/sources`);
       return response.data;
     } catch (error) {
       throw this._handleError(error);
@@ -134,7 +97,7 @@ const newsService = {
    */
   async triggerCrawl(data) {
     try {
-      const response = await apiClient.post("/crawl", data);
+      const response = await apiClient.post(`${CRAWLER_BASE}/crawl`, data);
       return response.data;
     } catch (error) {
       throw this._handleError(error);
@@ -147,7 +110,7 @@ const newsService = {
    */
   async getSchedulerStatus() {
     try {
-      const response = await apiClient.get("/scheduler/status");
+      const response = await apiClient.get(`${CRAWLER_BASE}/scheduler/status`);
       return response.data;
     } catch (error) {
       throw this._handleError(error);
@@ -160,7 +123,9 @@ const newsService = {
    */
   async triggerScheduler() {
     try {
-      const response = await apiClient.post("/scheduler/trigger");
+      const response = await apiClient.post(
+        `${CRAWLER_BASE}/scheduler/trigger`,
+      );
       return response.data;
     } catch (error) {
       throw this._handleError(error);

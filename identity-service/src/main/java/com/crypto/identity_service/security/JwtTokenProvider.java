@@ -5,12 +5,16 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import com.crypto.identity_service.models.User;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -39,6 +43,24 @@ public class JwtTokenProvider {
     public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "access");
+        
+        // Add user info to claims
+        if (userDetails instanceof User) {
+            User user = (User) userDetails;
+            claims.put("userId", user.getId());
+            claims.put("fullName", user.getFullName());
+            
+            // Determine role: VIP if active VIP subscription, else highest role
+            String role = determineUserRole(user);
+            claims.put("role", role);
+            
+            // Add all authorities
+            String authorities = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
+            claims.put("authorities", authorities);
+        }
+        
         return createToken(claims, userDetails.getUsername(), accessTokenExpiration);
     }
     
@@ -47,6 +69,27 @@ public class JwtTokenProvider {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
+    }
+    
+    /**
+     * Determine the effective role for the user
+     * VIP status is determined by vipExpiredAt field
+     */
+    private String determineUserRole(User user) {
+        // Check if user has active VIP subscription
+        if (user.isVip()) {
+            return "VIP";
+        }
+        
+        // Check for ADMIN role
+        boolean isAdmin = user.getRoles().stream()
+            .anyMatch(role -> role.getName().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            return "ADMIN";
+        }
+        
+        // Default to REGULAR
+        return "REGULAR";
     }
     
     private String createToken(Map<String, Object> claims, String subject, long expiration) {

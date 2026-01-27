@@ -1,8 +1,5 @@
 package com.crypto.identity_service.conffig;
 
-import com.crypto.identity_service.security.JwtAuthenticationFilter;
-import com.crypto.identity_service.security.OAuth2SuccessHandler;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +16,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.crypto.identity_service.security.JwtAuthenticationFilter;
+import com.crypto.identity_service.security.OAuth2FailureHandler;
+import com.crypto.identity_service.security.OAuth2SuccessHandler;
+
+import lombok.RequiredArgsConstructor;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -27,6 +30,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
+    private final OAuth2FailureHandler oauth2FailureHandler;
     
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,6 +57,7 @@ public class SecurityConfig {
             // OAuth2 Login
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(oauth2SuccessHandler)
+                .failureHandler(oauth2FailureHandler)
             )
             
             // Session management

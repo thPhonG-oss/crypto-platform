@@ -2,3 +2,12 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:144d4f116a209df65fbaa61977a95a74e0657fc7eeccb0aeec76d364c4e6759f}
+
+logging:
+  level:
+    com.crypto.gateway_service: DEBUG
+    org.springframework.cloud.gateway: TRACE

@@ -2,290 +2,309 @@ import React, { useState, useEffect } from "react";
 import MarketDashboard from "./components/MarketDashboard";
 import NewsPanel from "./components/NewsPanel";
 import CryptoChart from "./components/CryptoChart";
+import {
+  LoginModal,
+  RegisterModal,
+  UserMenu,
+  AuthButtons,
+} from "./components/auth";
+import { useAuth } from "./context/AuthContext";
 import { CONFIG } from "./config";
 import { checkServiceHealth } from "./utils/helper";
-import { Activity, Server, Database, Globe, Sparkles } from "lucide-react";
+import {
+  TrendingUp,
+  Wifi,
+  WifiOff,
+  ChevronDown,
+  LayoutGrid,
+  BarChart3,
+  Newspaper,
+  Zap,
+} from "lucide-react";
 
 const AVAILABLE_SYMBOLS = [
-  { symbol: "BTCUSDT", name: "Bitcoin" },
-  { symbol: "ETHUSDT", name: "Ethereum" },
-  { symbol: "BNBUSDT", name: "BNB" },
-  { symbol: "SOLUSDT", name: "Solana" },
+  { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
+  { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
+  { symbol: "BNBUSDT", name: "BNB", icon: "◆" },
+  { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
 ];
 
 const TIMEFRAMES = [
-  { value: "1m", label: "1 Minute" },
-  { value: "5m", label: "5 Minutes" },
-  { value: "15m", label: "15 Minutes" },
-  { value: "1h", label: "1 Hour" },
-  { value: "4h", label: "4 Hours" },
-  { value: "1d", label: "1 Day" },
+  { value: "1m", label: "1M" },
+  { value: "5m", label: "5M" },
+  { value: "15m", label: "15M" },
+  { value: "1h", label: "1H" },
+  { value: "4h", label: "4H" },
+  { value: "1d", label: "1D" },
+];
+
+const LAYOUT_MODES = [
+  { id: "split", icon: LayoutGrid, label: "Split View" },
+  { id: "chart-only", icon: BarChart3, label: "Chart Only" },
+  { id: "news-only", icon: Newspaper, label: "News Only" },
 ];
 
 function App() {
+  const { isAuthenticated, user, isVip } = useAuth();
+
   const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT");
   const [selectedTimeframe, setSelectedTimeframe] = useState("1m");
   const [layoutMode, setLayoutMode] = useState("split");
-  const [systemStatus, setSystemStatus] = useState({
-    gateway: false,
-    market: false,
-    crawler: false,
-    analysis: false,
-  });
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Auth modal states
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+
+  const openLogin = () => {
+    setShowRegisterModal(false);
+    setShowLoginModal(true);
+  };
+
+  const openRegister = () => {
+    setShowLoginModal(false);
+    setShowRegisterModal(true);
+  };
 
   // Check system health on mount
   useEffect(() => {
     const checkHealth = async () => {
-      const gateway = await checkServiceHealth(
-        `${CONFIG.API.GATEWAY}/actuator`,
-      );
       const market = await checkServiceHealth(
         `${CONFIG.API.MARKET_SERVICE}/actuator`,
       );
-      // Crawler service has a custom /health endpoint, others use Spring Actuator
-      const crawler = await checkServiceHealth(CONFIG.API.CRAWLER_SERVICE);
-      const analysis = await checkServiceHealth(CONFIG.API.ANALYSIS_SERVICE);
-
-      setSystemStatus({
-        gateway,
-        market,
-        crawler,
-        analysis,
-      });
+      setIsConnected(market);
     };
 
     checkHealth();
-    // Re-check every minute
-    const interval = setInterval(checkHealth, 60000);
+    const interval = setInterval(checkHealth, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <div className="min-h-screen bg-deep-bg text-gray-100 font-sans selection:bg-neon-blue/30 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-8 relative z-10">
-        {/* Header */}
-        <header className="glass-panel rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between animate-[float_6s_ease-in-out_infinite] border-t border-neon-blue/20">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-2 text-glow">
-              Crypto{" "}
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-neon-blue to-neon-purple">
-                Nexus
-              </span>
-            </h1>
-            <p className="text-gray-400 flex items-center gap-2 text-sm md:text-base font-medium">
-              <Activity className="w-4 h-4 text-neon-blue animate-pulse" />
-              <span className="text-gray-300">Live Market Intelligence</span>
-            </p>
-          </div>
+  const selectedSymbolData = AVAILABLE_SYMBOLS.find(
+    (s) => s.symbol === selectedSymbol,
+  );
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
-            {/* Timeframe Selector */}
-            <div className="relative group">
-              <select
-                value={selectedTimeframe}
-                onChange={(e) => setSelectedTimeframe(e.target.value)}
-                className="appearance-none bg-gray-900/80 text-white px-6 py-3 pr-10 rounded-xl border border-gray-700/50 focus:border-neon-blue/50 focus:ring-0 focus:shadow-[0_0_15px_-5px_var(--color-neon-blue)] transition-all cursor-pointer outline-none hover:bg-gray-800"
-              >
-                {TIMEFRAMES.map((tf) => (
-                  <option key={tf.value} value={tf.value}>
-                    {tf.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neon-blue group-hover:text-white transition-colors">
-                <svg
-                  width="10"
-                  height="6"
-                  viewBox="0 0 10 6"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M1 1L5 5L9 1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+  return (
+    <div className="min-h-screen bg-bg-primary text-gray-100">
+      {/* Top Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-bg-secondary/95 backdrop-blur-sm border-b border-border-primary">
+        <div className="max-w-[1800px] mx-auto px-4 lg:px-6">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent-primary to-accent-secondary flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">CryptoNexus</h1>
+                <div className="flex items-center gap-1.5">
+                  {isConnected ? (
+                    <>
+                      <Wifi className="w-3 h-3 text-accent-primary" />
+                      <span className="text-[10px] text-accent-primary font-medium">
+                        LIVE
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-3 h-3 text-gray-500" />
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        OFFLINE
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Layout Toggles */}
-            <div className="flex bg-gray-900/80 p-1.5 rounded-xl border border-gray-700/50 backdrop-blur-md">
-              {[
-                { id: "split", icon: "📊📰", label: "Split" },
-                { id: "chart-only", icon: "📊", label: "Chart" },
-                { id: "news-only", icon: "📰", label: "News" },
-              ].map((mode) => (
+            {/* Center - Symbol Tabs */}
+            <div className="hidden md:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
+              {AVAILABLE_SYMBOLS.map((item) => (
                 <button
-                  key={mode.id}
-                  onClick={() => setLayoutMode(mode.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                    layoutMode === mode.id
-                      ? "bg-linear-to-r from-neon-blue/20 to-neon-purple/20 text-white shadow-[0_0_10px_-2px_var(--color-neon-blue)] border border-neon-blue/30"
-                      : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  key={item.symbol}
+                  onClick={() => setSelectedSymbol(item.symbol)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    selectedSymbol === item.symbol
+                      ? "bg-accent-primary text-white"
+                      : "text-gray-400 hover:text-white hover:bg-bg-card"
                   }`}
-                  title={mode.label}
                 >
-                  {mode.icon}
+                  <span className="mr-1.5">{item.icon}</span>
+                  {item.name}
                 </button>
               ))}
             </div>
-          </div>
-        </header>
 
-        {/* Symbol Tabs */}
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide pt-2">
+            {/* Right - Controls & Auth */}
+            <div className="flex items-center gap-3">
+              {/* Timeframe Pills */}
+              <div className="hidden sm:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf.value}
+                    onClick={() => setSelectedTimeframe(tf.value)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                      selectedTimeframe === tf.value
+                        ? "bg-accent-secondary text-white"
+                        : "text-gray-500 hover:text-white"
+                    }`}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Layout Toggle */}
+              <div className="hidden lg:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
+                {LAYOUT_MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  return (
+                    <button
+                      key={mode.id}
+                      onClick={() => setLayoutMode(mode.id)}
+                      className={`p-2 rounded-md transition-all ${
+                        layoutMode === mode.id
+                          ? "bg-bg-card text-accent-primary"
+                          : "text-gray-500 hover:text-white"
+                      }`}
+                      title={mode.label}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Divider */}
+              <div className="w-px h-8 bg-border-primary" />
+
+              {/* Auth */}
+              {isAuthenticated ? (
+                <UserMenu />
+              ) : (
+                <AuthButtons
+                  onLoginClick={openLogin}
+                  onRegisterClick={openRegister}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Symbol Selector */}
+      <div className="md:hidden p-4 border-b border-border-primary">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
           {AVAILABLE_SYMBOLS.map((item) => (
             <button
               key={item.symbol}
               onClick={() => setSelectedSymbol(item.symbol)}
-              className={`shrink-0 px-8 py-4 rounded-xl font-bold transition-all relative overflow-hidden group border ${
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 selectedSymbol === item.symbol
-                  ? "bg-gray-900/80 text-white border-neon-blue shadow-[0_0_20px_-5px_var(--color-neon-blue)] translate-y-[-2px]"
-                  : "bg-gray-900/40 text-gray-500 border-white/5 hover:border-white/20 hover:text-gray-300 hover:bg-gray-800/60"
+                  ? "bg-accent-primary text-white"
+                  : "bg-bg-card text-gray-400 border border-border-primary"
               }`}
             >
-              {/* Animated Background Line */}
-              {selectedSymbol === item.symbol && (
-                <div className="absolute bottom-0 left-0 h-[2px] w-full bg-linear-to-r from-neon-blue via-white to-neon-blue animate-[shimmer_2s_infinite]" />
-              )}
-
-              <div className="flex flex-col items-center">
-                <span
-                  className={`text-base tracking-wide ${selectedSymbol === item.symbol ? "text-glow" : ""}`}
-                >
-                  {item.name}
-                </span>
-                <span
-                  className={`text-[10px] uppercase tracking-[0.2em] mt-1 ${selectedSymbol === item.symbol ? "text-neon-blue" : "text-gray-600 group-hover:text-gray-400"}`}
-                >
-                  {item.symbol}
-                </span>
-              </div>
+              {item.icon} {item.name}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Main Content Grid */}
-        <main
-          className="grid gap-8 items-start transition-all duration-500 ease-out"
-          style={{
-            gridTemplateColumns: layoutMode === "split" ? "2fr 1fr" : "1fr",
-            minHeight: "600px",
-          }}
+      {/* Main Content */}
+      <main className="max-w-[1800px] mx-auto p-4 lg:p-6">
+        {/* Current Symbol Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-border-secondary flex items-center justify-center text-2xl">
+              {selectedSymbolData?.icon}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">
+                {selectedSymbolData?.name}
+              </h2>
+              <p className="text-sm text-gray-500">{selectedSymbol}</p>
+            </div>
+          </div>
+
+          {/* Mobile Timeframe */}
+          <div className="sm:hidden">
+            <select
+              value={selectedTimeframe}
+              onChange={(e) => setSelectedTimeframe(e.target.value)}
+              className="bg-bg-card border border-border-primary rounded-lg px-3 py-2 text-sm text-white"
+            >
+              {TIMEFRAMES.map((tf) => (
+                <option key={tf.value} value={tf.value}>
+                  {tf.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Content Grid */}
+        <div
+          className={`grid gap-6 ${
+            layoutMode === "split" ? "lg:grid-cols-[1fr,400px]" : "grid-cols-1"
+          }`}
         >
           {/* Chart Section */}
           {(layoutMode === "split" || layoutMode === "chart-only") && (
-            <div className="glass-panel rounded-2xl p-1 border-t border-neon-purple/30 overflow-hidden relative group">
-              <div className="absolute inset-0 bg-neon-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none mix-blend-screen" />
-              <CryptoChart
-                symbol={selectedSymbol}
-                timeframe={selectedTimeframe}
-              />
+            <div className="card rounded-2xl overflow-hidden">
+              <div className="p-4 border-b border-border-primary flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-accent-primary" />
+                  <span className="font-semibold text-white">
+                    {selectedSymbol} Chart
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-xs font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
+                    Live
+                  </span>
+                </div>
+              </div>
+              <div className="h-[500px] lg:h-[600px]">
+                <CryptoChart
+                  symbol={selectedSymbol}
+                  timeframe={selectedTimeframe}
+                />
+              </div>
             </div>
           )}
 
           {/* News Section */}
           {(layoutMode === "split" || layoutMode === "news-only") && (
-            <div className="glass-panel rounded-2xl p-4 h-[600px] flex flex-col border-t border-neon-pink/30 relative">
-              <div className="absolute -top-1 -right-1 w-20 h-20 bg-neon-pink/20 blur-[40px] rounded-full pointer-events-none" />
-              <NewsPanel selectedSymbol={selectedSymbol} />
+            <div className="card rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[680px]">
+              <div className="p-4 border-b border-border-primary flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-accent-warning" />
+                  <span className="font-semibold text-white">Live Feed</span>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <NewsPanel selectedSymbol={selectedSymbol} />
+              </div>
             </div>
           )}
-        </main>
+        </div>
+      </main>
 
-        {/* System Status Footer */}
-        <footer className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-8 border-t border-gray-800/50">
-          <StatCard
-            title="Gateway"
-            value={systemStatus.gateway ? "Online" : "Connecting..."}
-            status={systemStatus.gateway ? "success" : "warning"}
-            icon={<Globe className="w-4 h-4" />}
-          />
-          <StatCard
-            title="Market Data"
-            value={systemStatus.market ? "Connected" : "Offline"}
-            status={systemStatus.market ? "success" : "error"}
-            icon={<Activity className="w-4 h-4" />}
-          />
-          <StatCard
-            title="Crawler"
-            value={systemStatus.crawler ? "Active" : "Starting"}
-            status={systemStatus.crawler ? "success" : "warning"}
-            icon={<Server className="w-4 h-4" />}
-            animate={systemStatus.crawler}
-          />
-          <StatCard
-            title="AI Analysis"
-            value={systemStatus.analysis ? "Online" : "Offline"}
-            status={systemStatus.analysis ? "success" : "error"}
-            icon={<Sparkles className="w-4 h-4" />}
-            animate={systemStatus.analysis}
-          />
-          <StatCard
-            title="Database"
-            value="TimescaleDB"
-            status="success"
-            icon={<Database className="w-4 h-4" />}
-          />
-        </footer>
-      </div>
-
-      {/* Background Ambient Glows */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/10 blur-[120px] rounded-full animate-float opacity-60" />
-        <div
-          className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-blue/10 blur-[120px] rounded-full animate-float opacity-60"
-          style={{ animationDelay: "-3s" }}
-        />
-      </div>
+      {/* Auth Modals */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSwitchToRegister={openRegister}
+      />
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSwitchToLogin={openLogin}
+      />
     </div>
   );
 }
-
-// Stats Card Component
-const StatCard = ({
-  title,
-  value,
-  icon,
-  status = "neutral",
-  animate = false,
-}) => {
-  const statusColors = {
-    success:
-      "text-neon-blue border-neon-blue/30 bg-neon-blue/5 shadow-[0_0_10px_-5px_var(--color-neon-blue)]",
-    warning: "text-amber-400 border-amber-500/30 bg-amber-500/5",
-    error:
-      "text-neon-pink border-neon-pink/30 bg-neon-pink/5 shadow-[0_0_10px_-5px_var(--color-neon-pink)]",
-    neutral: "text-gray-400 border-gray-700 bg-gray-800/50",
-  };
-
-  return (
-    <div
-      className={`relative overflow-hidden rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02] ${statusColors[status]}`}
-    >
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-3">
-          <div
-            className={`p-2 rounded-lg bg-gray-900/50 backdrop-blur-sm ${animate ? "animate-pulse" : ""}`}
-          >
-            {icon}
-          </div>
-          <div>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-              {title}
-            </p>
-            <p className="text-gray-200 text-sm font-bold mt-0.5">{value}</p>
-          </div>
-        </div>
-        {status === "success" && (
-          <div className="w-2 h-2 rounded-full bg-neon-blue shadow-[0_0_10px_var(--color-neon-blue)] animate-pulse" />
-        )}
-      </div>
-    </div>
-  );
-};
 
 export default App;

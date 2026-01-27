@@ -34,72 +34,55 @@ const NewsPanel = ({ selectedSymbol }) => {
 
   return (
     <>
-      <div className="bg-transparent rounded-lg p-0 h-full overflow-hidden flex flex-col relative z-10">
+      <div className="bg-transparent rounded-lg p-4 h-full overflow-hidden flex flex-col relative z-10">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pl-1 pr-1 gap-4">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2 tracking-tight text-glow">
-            <Zap className="w-5 h-5 text-neon-blue" />
-            LIVE FEED
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+            Latest News
             {loading && (
-              <RefreshCw className="w-3 h-3 animate-spin text-neon-blue" />
+              <RefreshCw className="w-3 h-3 animate-spin text-accent-primary" />
             )}
           </h2>
 
           {/* Filter Buttons */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-neon-purple/70" />
-            <div className="flex gap-1 p-1 rounded-xl bg-gray-900/50 backdrop-blur-md border border-white/5">
-              {["all", "btc", "eth", "sol"].map((sym) => (
-                <button
-                  key={sym}
-                  onClick={() => handleFilterChange(sym)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
-                    filter === sym
-                      ? "bg-neon-blue/20 text-neon-blue shadow-[0_0_10px_-5px_var(--color-neon-blue)] border border-neon-blue/30"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
-                  }`}
-                >
-                  {sym === "all" ? "All" : sym}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-bg-tertiary">
+            {["all", "btc", "eth", "sol"].map((sym) => (
+              <button
+                key={sym}
+                onClick={() => handleFilterChange(sym)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase transition-all ${
+                  filter === sym
+                    ? "bg-accent-primary text-white"
+                    : "text-gray-500 hover:text-white"
+                }`}
+              >
+                {sym === "all" ? "All" : sym}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Error State */}
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 mb-4 mx-1 backdrop-blur-sm">
-            <p className="text-rose-400 text-xs font-bold flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-              CONNECTION ERROR: {error}
+          <div className="bg-accent-danger/10 border border-accent-danger/20 rounded-lg p-3 mb-4">
+            <p className="text-accent-danger text-xs font-medium flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-danger animate-pulse" />
+              Error: {error}
             </p>
           </div>
         )}
 
         {/* News List */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
           {loading && news.length === 0 ? (
-            <div className="flex flex-col justify-center items-center h-full gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full border-2 border-neon-blue/20 border-t-neon-blue animate-spin" />
-                <div
-                  className="absolute inset-0 w-12 h-12 rounded-full border-2 border-neon-purple/20 border-b-neon-purple animate-spin"
-                  style={{
-                    animationDirection: "reverse",
-                    animationDuration: "1s",
-                  }}
-                />
-              </div>
-              <p className="text-neon-blue/50 text-xs font-bold tracking-widest animate-pulse">
-                SEARCHING SATELLITE DATA...
-              </p>
+            <div className="flex flex-col justify-center items-center h-full gap-3">
+              <div className="w-8 h-8 rounded-full border-2 border-accent-primary/20 border-t-accent-primary animate-spin" />
+              <p className="text-gray-500 text-xs">Loading news...</p>
             </div>
           ) : news.length === 0 ? (
-            <div className="flex flex-col justify-center items-center h-full gap-4 opacity-50">
-              <div className="text-4xl">📡</div>
-              <p className="text-gray-500 text-sm font-medium">
-                No signal detected
-              </p>
+            <div className="flex flex-col justify-center items-center h-full gap-3 opacity-50">
+              <div className="text-3xl">📰</div>
+              <p className="text-gray-500 text-sm">No news available</p>
             </div>
           ) : (
             <>
@@ -115,16 +98,15 @@ const NewsPanel = ({ selectedSymbol }) => {
               {hasMore && !loading && (
                 <button
                   onClick={loadMore}
-                  className="w-full py-4 mt-2 text-gray-500 hover:text-neon-blue hover:border-neon-blue/30 hover:bg-neon-blue/5 text-xs font-bold uppercase tracking-[0.2em] transition-all border border-dashed border-gray-800 rounded-xl group relative overflow-hidden"
+                  className="w-full py-3 mt-2 text-gray-500 hover:text-accent-primary text-xs font-medium transition-all border border-dashed border-border-primary hover:border-accent-primary/30 rounded-lg"
                 >
-                  <span className="relative z-10">Load more signals</span>
-                  <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                  Load more
                 </button>
               )}
 
               {loading && news.length > 0 && (
-                <div className="flex justify-center py-4">
-                  <RefreshCw className="w-5 h-5 animate-spin text-neon-blue opacity-50" />
+                <div className="flex justify-center py-3">
+                  <RefreshCw className="w-4 h-4 animate-spin text-accent-primary opacity-50" />
                 </div>
               )}
             </>
