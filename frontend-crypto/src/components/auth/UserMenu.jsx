@@ -12,13 +12,16 @@ import {
   ChevronDown,
   Sparkles,
   CreditCard,
+  History,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { CONFIG } from "../../config";
+import VipUpgradeModal from "./VipUpgradeModal";
 
 export default function UserMenu() {
   const { user, isVip, isAdmin, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const menuRef = useRef(null);
 
   // Close menu when clicking outside
@@ -119,8 +122,7 @@ export default function UserMenu() {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  // Navigate to VIP upgrade page or open modal
-                  window.location.href = "/upgrade";
+                  setShowUpgradeModal(true);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left bg-accent-warning/10 border border-accent-warning/20 hover:border-accent-warning/40 transition-all mb-2"
               >
@@ -136,6 +138,18 @@ export default function UserMenu() {
                 <Sparkles className="w-4 h-4 text-accent-warning ml-auto animate-pulse" />
               </button>
             )}
+
+            {/* Payment History */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                // TODO: Navigate to payment history
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-bg-tertiary transition-all"
+            >
+              <History className="w-4 h-4" />
+              <span>Lịch sử thanh toán</span>
+            </button>
 
             {/* Profile */}
             <button
@@ -189,6 +203,12 @@ export default function UserMenu() {
           </div>
         </div>
       )}
+
+      {/* VIP Upgrade Modal */}
+      <VipUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </div>
   );
 }

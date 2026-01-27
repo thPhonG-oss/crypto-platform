@@ -1,9 +1,7 @@
 package com.crypto.gateway_service.filter;
 
-import com.crypto.gateway_service.config.RouteValidator;
-import com.crypto.gateway_service.util.JwtUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.nio.charset.StandardCharsets;
+
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -15,9 +13,14 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
+import com.crypto.gateway_service.config.RouteValidator;
+import com.crypto.gateway_service.service.TokenBlacklistService;
+import com.crypto.gateway_service.util.JwtUtil;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 /**
  * Global authentication filter for JWT validation
@@ -29,6 +32,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     private final RouteValidator routeValidator;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -71,6 +75,27 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             return onError(exchange, "Invalid token type", HttpStatus.UNAUTHORIZED);
         }
 
+        // Check if token is blacklisted (user logged out)
+        return tokenBlacklistService.isTokenBlacklisted(token)
+            .flatMap(isBlacklisted -> {
+                if (isBlacklisted) {
+                    log.warn("Blacklisted token used for endpoint: {}", path);
+                    return onError(exchange, "Token has been revoked", HttpStatus.UNAUTHORIZED);
+                }
+                return processAuthenticatedRequest(exchange, chain, request, token, path);
+            });
+    }
+
+    /**
+     * Process the request after token validation and blacklist check
+     */
+    private Mono<Void> processAuthenticatedRequest(
+            ServerWebExchange exchange, 
+            GatewayFilterChain chain,
+            ServerHttpRequest request,
+            String token,
+            String path) {
+        
         // Extract user info from token
         String username = jwtUtil.extractUsername(token);
         Long userId = jwtUtil.extractUserId(token);

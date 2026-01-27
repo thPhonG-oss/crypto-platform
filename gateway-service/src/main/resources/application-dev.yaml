@@ -3,6 +3,12 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
 app:
   jwt:
     secret: ${JWT_SECRET:144d4f116a209df65fbaa61977a95a74e0657fc7eeccb0aeec76d364c4e6759f}

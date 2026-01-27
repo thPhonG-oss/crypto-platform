@@ -24,6 +24,12 @@ public class JwtUtil {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        log.info("JwtUtil initialized with secret (first 10 chars): {}", 
+            jwtSecret != null ? jwtSecret.substring(0, Math.min(10, jwtSecret.length())) : "NULL");
+    }
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
@@ -33,13 +39,15 @@ public class JwtUtil {
      */
     public boolean validateToken(String token) {
         try {
+            log.debug("Validating token (first 20 chars): {}", token.substring(0, Math.min(20, token.length())));
             Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token);
+            log.debug("Token validation successful");
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.error("JWT validation failed: {} - Token preview: {}", e.getMessage(), token.substring(0, Math.min(50, token.length())));
             return false;
         }
     }

@@ -116,12 +116,13 @@ public class AuthServiceImpl implements AuthService {
 
     User user = refreshToken.getUser();
 
+    // Delete old refresh token and flush to avoid duplicate key
+    refreshTokenRepository.delete(refreshToken);
+    refreshTokenRepository.flush();
+
     // Generate new tokens
     String newAccessToken = jwtTokenProvider.generateAccessToken(user);
     String newRefreshToken = jwtTokenProvider.generateRefreshToken(user);
-
-    // Delete old refresh token
-    refreshTokenRepository.delete(refreshToken);
 
     // Save new refresh token
     RefreshToken newToken =

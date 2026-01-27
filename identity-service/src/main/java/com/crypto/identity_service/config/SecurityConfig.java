@@ -1,5 +1,9 @@
 package com.crypto.identity_service.config;
 
+import com.crypto.identity_service.security.JwtAuthenticationFilter;
+import com.crypto.identity_service.security.OAuth2FailureHandler;
+import com.crypto.identity_service.security.OAuth2SuccessHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,12 +19,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import com.crypto.identity_service.security.JwtAuthenticationFilter;
-import com.crypto.identity_service.security.OAuth2FailureHandler;
-import com.crypto.identity_service.security.OAuth2SuccessHandler;
-
-import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -70,14 +68,13 @@ public class SecurityConfig {
     return http.build();
   }
 
-  
-@Bean
-public AuthenticationProvider authenticationProvider() {
+  @Bean
+  public AuthenticationProvider authenticationProvider() {
     DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
     authProvider.setUserDetailsService(userDetailsService);
     authProvider.setPasswordEncoder(passwordEncoder());
     return authProvider;
-}
+  }
 
   @Bean
   public AuthenticationManager authenticationManager(AuthenticationConfiguration config)

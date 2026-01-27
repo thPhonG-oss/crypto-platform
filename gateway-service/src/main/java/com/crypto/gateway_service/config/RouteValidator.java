@@ -1,10 +1,10 @@
 package com.crypto.gateway_service.config;
 
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.function.Predicate;
+
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
 
 /**
  * Validates routes to determine authentication requirements
@@ -23,13 +23,20 @@ public class RouteValidator {
         "/identity-service/oauth2",
         "/identity-service/login/oauth2",
         
-        // Public market data
-        "/market-service/api/v1/klines",
-        "/market-service/api/v1/symbols",
+        // Payment callback (VNPAY returns here)
+        "/identity-service/api/v1/payments/vnpay-return",
+        
+        // Public market data (note: /market/ prefix in path)
+        "/market-service/api/v1/market/klines",
+        "/market-service/api/v1/market/symbols",
         "/market-service/ws",
         
         // Public news (basic access)
         "/crawler-service/api/v1/news",
+        "/analysis-service/api/v1/news",
+        
+        // Gateway endpoints
+        "/api/v1/gateway",
         
         // Health checks
         "/actuator/health",

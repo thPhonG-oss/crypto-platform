@@ -24,6 +24,7 @@ eureka:
     hostname: ${HOSTNAME:identity-service}
 
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   jwt:
     secret: ${JWT_SECRET:144d4f116a209df65fbaa61977a95a74e0657fc7eeccb0aeec76d364c4e6759f}
     access-token-expiration: 900000 # 15 minutes
