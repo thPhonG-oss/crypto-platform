@@ -7,6 +7,7 @@ from app.crawlers.rule_parser import RuleBasedParser
 from app.crawlers.gemini_parser import GeminiParser
 from app.crawlers.sources import get_source_config
 from app import models
+from app.parsers.adaptive_parser import AdaptiveParser
 
 
 class CrawlerService:
@@ -19,6 +20,9 @@ class CrawlerService:
     def __init__(self):
         self.rule_parser = RuleBasedParser()
         self.gemini_parser = GeminiParser()
+        # ✅ FIX: Initialize adaptive parser
+        self.adaptive_parser = AdaptiveParser(self.gemini_parser)
+        logger.info("✅ CrawlerService initialized with adaptive parser")
     
     async def crawl_and_save(
         self,
@@ -27,22 +31,11 @@ class CrawlerService:
         db: Session,
         force_gemini: bool = False
     ) -> Dict:
-        """
-        Main crawling method with hybrid parsing
-        
-        Args:
-            url: Article URL
-            source: Source name
-            db: Database session
-            force_gemini: Skip rule-based, go straight to Gemini
-            
-        Returns:
-            Dict with status and result
-        """
+        """Main crawling method with hybrid parsing"""
         # Check if already crawled
         existing = db.query(models.News).filter(models.News.url == url).first()
         if existing:
-            logger.info(f"URL already exists: {url}")
+            logger.info(f"⏭️ URL already exists: {url}")
             return {
                 'status': 'skipped',
                 'message': 'URL already crawled',
@@ -50,79 +43,90 @@ class CrawlerService:
                 'parse_method': existing.parse_method
             }
         
-        # Initialize result
         parsed_data = None
         parse_method = None
-        error_msg = None
+        gemini_used = False
         
         try:
-            # Strategy 1: Try rule-based parsing first (unless forced)
-            if not force_gemini and get_source_config(source):
-                logger.info(f"Trying rule-based parsing for {url}")
-                parsed_data = self.rule_parser.parse_article(url, source)
+            # ✅ FIX: Fetch HTML ONCE
+            logger.info(f"🌐 Fetching HTML from {url}")
+            html = self.rule_parser.fetch_html(url)
+            
+            if not html:
+                return {'status': 'failed', 'error': 'fetch_failed'}
+            
+            # Strategy 1: Adaptive semantic parsing
+            if not force_gemini:
+                logger.info(f"🔍 Trying adaptive parser for {url}")
+                # ✅ FIX: Pass html
+                parsed_data = self.adaptive_parser.parse_article(url, source, html)
                 
                 if parsed_data:
-                    parse_method = 'rule'
-                    logger.info(f"✅ Rule-based parsing successful")
-                else:
-                    logger.info(f"⚠️ Rule-based parsing failed, falling back to Gemini")
+                    parse_method = parsed_data.get('parse_method', 'semantic')
+                    logger.info(f"✅ Adaptive parsing successful for {url}")
             
-            # Strategy 2: Fallback to Gemini AI
-            if not parsed_data and settings.USE_GEMINI_FALLBACK:
-                logger.info(f"🤖 Using Gemini AI parser for {url}")
-                parsed_data = self.gemini_parser.parse_article(url, source, db=db)
+            # Strategy 2: Gemini fallback
+            if not parsed_data:
+                if not settings.USE_GEMINI_FALLBACK:
+                    return {'status': 'failed', 'error': 'parsing_failed'}
+                
+                logger.info(f"🤖 Falling back to Gemini for {url}")
+                parsed_data = self.gemini_parser.parse_article(url, source, html=html, db=db)
+                gemini_used = True
                 
                 if parsed_data:
                     parse_method = 'gemini'
-                    logger.info(f"✅ Gemini parsing successful")
             
-            # If both methods failed
             if not parsed_data:
-                error_msg = "Both rule-based and Gemini parsing failed"
-                logger.error(error_msg)
-                return {
-                    'status': 'failed',
-                    'message': error_msg,
-                    'error': 'parsing_failed'
-                }
+                return {'status': 'failed', 'error': 'all_parsers_failed'}
             
             # Save to database
-            news = models.News(
-                title=parsed_data['title'],
-                content=parsed_data['content'],
-                summary=parsed_data.get('summary'),
-                url=url,
-                source=source,
-                author=parsed_data.get('author'),
-                published_at=parsed_data.get('published_at'),
-                related_symbols=parsed_data.get('related_symbols'),
-                parse_method=parse_method,
-                is_valid=True
-            )
-            
+            news = models.News(**parsed_data)
             db.add(news)
             db.commit()
             db.refresh(news)
             
-            logger.info(f"💾 Saved news article: {news.id} - {news.title[:50]}...")
-            
             return {
                 'status': 'success',
-                'message': 'Article crawled and saved successfully',
+                'message': 'Article crawled successfully',
                 'news_id': news.id,
-                'parse_method': parse_method
+                'parse_method': parse_method,
+                'gemini_used': gemini_used
             }
             
         except Exception as e:
             db.rollback()
-            error_msg = f"Error during crawl: {str(e)}"
-            logger.error(error_msg)
-            return {
-                'status': 'failed',
-                'message': error_msg,
-                'error': str(e)
-            }
+            logger.error(f"Error during crawl: {str(e)}")
+            return {'status': 'failed', 'error': str(e)}
     
+    async def crawl_batch(self, urls: list, source: str, db: Session) -> Dict:
+        """Crawl multiple URLs"""
+        results = {
+            'total': len(urls),
+            'success': 0,
+            'skipped': 0,
+            'failed': 0,
+            'details': []
+        }
+        
+        for url in urls:
+            result = await self.crawl_and_save(url, source, db)
+            
+            if result['status'] == 'success':
+                results['success'] += 1
+            elif result['status'] == 'skipped':
+                results['skipped'] += 1
+            else:
+                results['failed'] += 1
+            
+            results['details'].append({
+                'url': url,
+                'status': result['status'],
+                'news_id': result.get('news_id')
+            })
+        
+        logger.info(f"Batch: {results['success']}/{results['total']} succeeded")
+        return results
     async def crawl_batch(
         self,
         urls: list,
