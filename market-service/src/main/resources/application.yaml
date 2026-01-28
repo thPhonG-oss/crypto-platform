@@ -1,10 +1,10 @@
 server:
-  port: 0  # Random port cho load balancing
+  port: 0 # Random port cho load balancing
 
 spring:
   application:
     name: market-service
-  
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,7 +16,6 @@ spring:
 
 app:
   binance:
-    symbols: btcusdt,ethusdt,bnbusdt,solusdt
     intervals: 1m,5m,15m,1h,4h,1d
 
 eureka:

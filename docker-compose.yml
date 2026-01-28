@@ -69,7 +69,6 @@ services:
       - SPRING_DATASOURCE_USERNAME=admin
       - SPRING_DATASOURCE_PASSWORD=admin
       - SPRING_DATA_REDIS_HOST=redis
-      - APP_BINANCE_SYMBOLS=btcusdt,ethusdt,bnbusdt,solusdt
     networks:
       - crypto-net
     depends_on:
