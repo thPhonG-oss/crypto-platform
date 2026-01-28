@@ -20,108 +20,61 @@ class CrawlerService:
         self.rule_parser = RuleBasedParser()
         self.gemini_parser = GeminiParser()
     
-    async def crawl_and_save(
-        self,
-        url: str,
-        source: str,
-        db: Session,
-        force_gemini: bool = False
-    ) -> Dict:
-        """
-        Main crawling method with hybrid parsing
-        
-        Args:
-            url: Article URL
-            source: Source name
-            db: Database session
-            force_gemini: Skip rule-based, go straight to Gemini
-            
-        Returns:
-            Dict with status and result
-        """
+    async def crawl_and_save(self, url: str, source: str, db: Session, force_gemini: bool = False):
         # Check if already crawled
         existing = db.query(models.News).filter(models.News.url == url).first()
         if existing:
-            logger.info(f"URL already exists: {url}")
-            return {
-                'status': 'skipped',
-                'message': 'URL already crawled',
-                'news_id': existing.id,
-                'parse_method': existing.parse_method
-            }
+            return {'status': 'skipped', 'message': 'URL already crawled'}
         
-        # Initialize result
         parsed_data = None
         parse_method = None
-        error_msg = None
+        gemini_used = False
         
         try:
-            # Strategy 1: Try rule-based parsing first (unless forced)
-            if not force_gemini and get_source_config(source):
-                logger.info(f"Trying rule-based parsing for {url}")
-                parsed_data = self.rule_parser.parse_article(url, source)
+            if not force_gemini:
+                # Try adaptive semantic parsing first
+                logger.info(f"🔍 Trying adaptive parser for {url}")
+                parsed_data = self.adaptive_parser.parse_article(url, source, html=None)
                 
-                if parsed_data:
-                    parse_method = 'rule'
-                    logger.info(f"✅ Rule-based parsing successful")
-                else:
-                    logger.info(f"⚠️ Rule-based parsing failed, falling back to Gemini")
+                if parsed_data and parsed_data.get('parse_method') == 'semantic':
+                    parse_method = 'semantic'
+                    logger.info(f"✅ Semantic parsing successful for {url}")
             
-            # Strategy 2: Fallback to Gemini AI
-            if not parsed_data and settings.USE_GEMINI_FALLBACK:
-                logger.info(f"🤖 Using Gemini AI parser for {url}")
+            # Fallback to Gemini if needed
+            if not parsed_data:
+                if not settings.USE_GEMINI_FALLBACK:
+                    logger.error(f"❌ Semantic parsing failed and Gemini disabled for {url}")
+                    return {'status': 'failed', 'error': 'parsing_failed'}
+                
+                logger.info(f"🤖 Falling back to Gemini AI for {url}")
                 parsed_data = self.gemini_parser.parse_article(url, source, db=db)
+                gemini_used = True
                 
                 if parsed_data:
                     parse_method = 'gemini'
-                    logger.info(f"✅ Gemini parsing successful")
+                    logger.info(f"✅ Gemini parsing successful for {url}")
             
-            # If both methods failed
             if not parsed_data:
-                error_msg = "Both rule-based and Gemini parsing failed"
-                logger.error(error_msg)
-                return {
-                    'status': 'failed',
-                    'message': error_msg,
-                    'error': 'parsing_failed'
-                }
+                return {'status': 'failed', 'error': 'all_parsers_failed'}
             
             # Save to database
-            news = models.News(
-                title=parsed_data['title'],
-                content=parsed_data['content'],
-                summary=parsed_data.get('summary'),
-                url=url,
-                source=source,
-                author=parsed_data.get('author'),
-                published_at=parsed_data.get('published_at'),
-                related_symbols=parsed_data.get('related_symbols'),
-                parse_method=parse_method,
-                is_valid=True
-            )
-            
+            news = models.News(**parsed_data)
             db.add(news)
             db.commit()
             db.refresh(news)
-            
-            logger.info(f"💾 Saved news article: {news.id} - {news.title[:50]}...")
             
             return {
                 'status': 'success',
                 'message': 'Article crawled and saved successfully',
                 'news_id': news.id,
-                'parse_method': parse_method
+                'parse_method': parse_method,
+                'gemini_used': gemini_used
             }
             
         except Exception as e:
             db.rollback()
-            error_msg = f"Error during crawl: {str(e)}"
-            logger.error(error_msg)
-            return {
-                'status': 'failed',
-                'message': error_msg,
-                'error': str(e)
-            }
+            logger.error(f"Error during crawl: {str(e)}")
+            return {'status': 'failed', 'error': str(e)}
     
     async def crawl_batch(
         self,
