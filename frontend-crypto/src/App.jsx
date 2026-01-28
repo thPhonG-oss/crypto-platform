@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import MarketDashboard from "./components/MarketDashboard";
 import NewsPanel from "./components/NewsPanel";
-import CryptoChart from "./components/CryptoChart";
+import EnhancedCryptoChart from "./components/EnhancedCryptoChart";
+import MultiChartGrid from "./components/MultiChartGrid";
 import {
   LoginModal,
   RegisterModal,
@@ -9,17 +9,19 @@ import {
   AuthButtons,
 } from "./components/auth";
 import { useAuth } from "./context/AuthContext";
+import { useWebSocket } from "./context/WebSocketContext";
 import { CONFIG } from "./config";
 import { checkServiceHealth } from "./utils/helper";
 import {
   TrendingUp,
   Wifi,
   WifiOff,
-  ChevronDown,
   LayoutGrid,
   BarChart3,
   Newspaper,
   Zap,
+  Grid2X2,
+  Grid3x3,
 } from "lucide-react";
 
 const AVAILABLE_SYMBOLS = [
@@ -41,11 +43,14 @@ const TIMEFRAMES = [
 const LAYOUT_MODES = [
   { id: "split", icon: LayoutGrid, label: "Split View" },
   { id: "chart-only", icon: BarChart3, label: "Chart Only" },
+  { id: "grid-2x2", icon: Grid2X2, label: "Grid 2x2" },
+  { id: "grid-1x4", icon: Grid3x3, label: "Grid 1x4" },
   { id: "news-only", icon: Newspaper, label: "News Only" },
 ];
 
 function App() {
-  const { isAuthenticated, user, isVip } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { isConnected: wsConnected } = useWebSocket();
 
   const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT");
   const [selectedTimeframe, setSelectedTimeframe] = useState("1m");
@@ -84,6 +89,8 @@ function App() {
     (s) => s.symbol === selectedSymbol,
   );
 
+  const isGridMode = layoutMode === "grid-2x2" || layoutMode === "grid-1x4";
+
   return (
     <div className="min-h-screen bg-bg-primary text-gray-100">
       {/* Top Navigation Bar */}
@@ -98,7 +105,7 @@ function App() {
               <div>
                 <h1 className="text-lg font-bold text-white">CryptoNexus</h1>
                 <div className="flex items-center gap-1.5">
-                  {isConnected ? (
+                  {wsConnected ? (
                     <>
                       <Wifi className="w-3 h-3 text-accent-primary" />
                       <span className="text-[10px] text-accent-primary font-medium">
@@ -117,23 +124,25 @@ function App() {
               </div>
             </div>
 
-            {/* Center - Symbol Tabs */}
-            <div className="hidden md:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
-              {AVAILABLE_SYMBOLS.map((item) => (
-                <button
-                  key={item.symbol}
-                  onClick={() => setSelectedSymbol(item.symbol)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                    selectedSymbol === item.symbol
-                      ? "bg-accent-primary text-white"
-                      : "text-gray-400 hover:text-white hover:bg-bg-card"
-                  }`}
-                >
-                  <span className="mr-1.5">{item.icon}</span>
-                  {item.name}
-                </button>
-              ))}
-            </div>
+            {/* Center - Symbol Tabs (Hide in grid mode) */}
+            {!isGridMode && (
+              <div className="hidden md:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
+                {AVAILABLE_SYMBOLS.map((item) => (
+                  <button
+                    key={item.symbol}
+                    onClick={() => setSelectedSymbol(item.symbol)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      selectedSymbol === item.symbol
+                        ? "bg-accent-primary text-white"
+                        : "text-gray-400 hover:text-white hover:bg-bg-card"
+                    }`}
+                  >
+                    <span className="mr-1.5">{item.icon}</span>
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Right - Controls & Auth */}
             <div className="flex items-center gap-3">
@@ -192,104 +201,125 @@ function App() {
         </div>
       </nav>
 
-      {/* Mobile Symbol Selector */}
-      <div className="md:hidden p-4 border-b border-border-primary">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-          {AVAILABLE_SYMBOLS.map((item) => (
-            <button
-              key={item.symbol}
-              onClick={() => setSelectedSymbol(item.symbol)}
-              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedSymbol === item.symbol
-                  ? "bg-accent-primary text-white"
-                  : "bg-bg-card text-gray-400 border border-border-primary"
-              }`}
-            >
-              {item.icon} {item.name}
-            </button>
-          ))}
+      {/* Mobile Symbol Selector (Hide in grid mode) */}
+      {!isGridMode && (
+        <div className="md:hidden p-4 border-b border-border-primary">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            {AVAILABLE_SYMBOLS.map((item) => (
+              <button
+                key={item.symbol}
+                onClick={() => setSelectedSymbol(item.symbol)}
+                className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  selectedSymbol === item.symbol
+                    ? "bg-accent-primary text-white"
+                    : "bg-bg-card text-gray-400 border border-border-primary"
+                }`}
+              >
+                {item.icon} {item.name}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-[1800px] mx-auto p-4 lg:p-6">
-        {/* Current Symbol Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-border-secondary flex items-center justify-center text-2xl">
-              {selectedSymbolData?.icon}
+        {/* Current Symbol Header (Hide in grid mode) */}
+        {!isGridMode && (
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-border-secondary flex items-center justify-center text-2xl">
+                {selectedSymbolData?.icon}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {selectedSymbolData?.name}
+                </h2>
+                <p className="text-sm text-gray-500">{selectedSymbol}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">
-                {selectedSymbolData?.name}
-              </h2>
-              <p className="text-sm text-gray-500">{selectedSymbol}</p>
+
+            {/* Mobile Timeframe */}
+            <div className="sm:hidden">
+              <select
+                value={selectedTimeframe}
+                onChange={(e) => setSelectedTimeframe(e.target.value)}
+                className="bg-bg-card border border-border-primary rounded-lg px-3 py-2 text-sm text-white"
+              >
+                {TIMEFRAMES.map((tf) => (
+                  <option key={tf.value} value={tf.value}>
+                    {tf.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+        )}
 
-          {/* Mobile Timeframe */}
-          <div className="sm:hidden">
-            <select
-              value={selectedTimeframe}
-              onChange={(e) => setSelectedTimeframe(e.target.value)}
-              className="bg-bg-card border border-border-primary rounded-lg px-3 py-2 text-sm text-white"
-            >
-              {TIMEFRAMES.map((tf) => (
-                <option key={tf.value} value={tf.value}>
-                  {tf.label}
-                </option>
-              ))}
-            </select>
+        {/* GRID MODE - Multi-Chart View */}
+        {isGridMode && (
+          <MultiChartGrid
+            timeframe={selectedTimeframe}
+            gridColumns={layoutMode === "grid-1x4" ? 4 : 2}
+            onSymbolClick={(symbol) => {
+              setSelectedSymbol(symbol);
+              setLayoutMode("split");
+            }}
+          />
+        )}
+
+        {/* SINGLE/SPLIT/NEWS MODES */}
+        {!isGridMode && (
+          <div
+            className={`grid gap-6 ${
+              layoutMode === "split"
+                ? "lg:grid-cols-[1fr,400px]"
+                : "grid-cols-1"
+            }`}
+          >
+            {/* Chart Section */}
+            {(layoutMode === "split" || layoutMode === "chart-only") && (
+              <div className="card rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-border-primary flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-accent-primary" />
+                    <span className="font-semibold text-white">
+                      {selectedSymbol} Chart
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-xs font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
+                      Live
+                    </span>
+                  </div>
+                </div>
+                <div className="h-[500px] lg:h-[600px]">
+                  <EnhancedCryptoChart
+                    symbol={selectedSymbol}
+                    timeframe={selectedTimeframe}
+                    height={600}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* News Section */}
+            {(layoutMode === "split" || layoutMode === "news-only") && (
+              <div className="card rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[680px]">
+                <div className="p-4 border-b border-border-primary flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-accent-warning" />
+                    <span className="font-semibold text-white">Live Feed</span>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <NewsPanel selectedSymbol={selectedSymbol} />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-
-        {/* Content Grid */}
-        <div
-          className={`grid gap-6 ${
-            layoutMode === "split" ? "lg:grid-cols-[1fr,400px]" : "grid-cols-1"
-          }`}
-        >
-          {/* Chart Section */}
-          {(layoutMode === "split" || layoutMode === "chart-only") && (
-            <div className="card rounded-2xl overflow-hidden">
-              <div className="p-4 border-b border-border-primary flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-accent-primary" />
-                  <span className="font-semibold text-white">
-                    {selectedSymbol} Chart
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-xs font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
-                    Live
-                  </span>
-                </div>
-              </div>
-              <div className="h-[500px] lg:h-[600px]">
-                <CryptoChart
-                  symbol={selectedSymbol}
-                  timeframe={selectedTimeframe}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* News Section */}
-          {(layoutMode === "split" || layoutMode === "news-only") && (
-            <div className="card rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[680px]">
-              <div className="p-4 border-b border-border-primary flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-accent-warning" />
-                  <span className="font-semibold text-white">Live Feed</span>
-                </div>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <NewsPanel selectedSymbol={selectedSymbol} />
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </main>
 
       {/* Auth Modals */}
