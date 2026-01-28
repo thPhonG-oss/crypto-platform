@@ -8,34 +8,8 @@ import React from "react";
 import EnhancedCryptoChart from "./EnhancedCryptoChart";
 import { Grid2X2, Maximize2, TrendingUp } from "lucide-react";
 
-const SYMBOLS_CONFIG = [
-  {
-    symbol: "BTCUSDT",
-    name: "Bitcoin",
-    icon: "₿",
-    color: "from-orange-500 to-yellow-600",
-  },
-  {
-    symbol: "ETHUSDT",
-    name: "Ethereum",
-    icon: "Ξ",
-    color: "from-blue-500 to-purple-600",
-  },
-  {
-    symbol: "BNBUSDT",
-    name: "BNB",
-    icon: "◆",
-    color: "from-yellow-500 to-orange-600",
-  },
-  {
-    symbol: "SOLUSDT",
-    name: "Solana",
-    icon: "◎",
-    color: "from-purple-500 to-pink-600",
-  },
-];
-
 const MultiChartGrid = ({
+  symbols = [], // ✨ NEW: Nhận symbols từ props thay vì hardcode
   timeframe = "1m",
   onSymbolClick,
   gridColumns = 2, // 1, 2, or 4
@@ -51,6 +25,35 @@ const MultiChartGrid = ({
     }
   };
 
+  // Get color gradient for each symbol
+  const getColorGradient = (index) => {
+    const gradients = [
+      "from-orange-500 to-yellow-600",
+      "from-blue-500 to-purple-600",
+      "from-yellow-500 to-orange-600",
+      "from-purple-500 to-pink-600",
+      "from-green-500 to-emerald-600",
+      "from-red-500 to-pink-600",
+      "from-indigo-500 to-blue-600",
+      "from-teal-500 to-cyan-600",
+    ];
+    return gradients[index % gradients.length];
+  };
+
+  // Show loading if no symbols
+  if (!symbols || symbols.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-bg-card rounded-xl">
+        <div className="text-center">
+          <p className="text-gray-400">No active symbols available</p>
+          <p className="text-xs text-gray-600 mt-2">
+            Please add symbols in admin panel
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -62,8 +65,7 @@ const MultiChartGrid = ({
           <div>
             <h3 className="text-lg font-bold text-white">Multi-Chart View</h3>
             <p className="text-xs text-gray-500">
-              Real-time • Shared Connection • {SYMBOLS_CONFIG.length} Active
-              Charts
+              Real-time • Shared Connection • {symbols.length} Active Charts
             </p>
           </div>
         </div>
@@ -78,35 +80,35 @@ const MultiChartGrid = ({
 
       {/* Grid Layout */}
       <div className={`grid ${getGridClass()} gap-4`}>
-        {SYMBOLS_CONFIG.map((config) => (
+        {symbols.map((symbolData, index) => (
           <div
-            key={config.symbol}
+            key={symbolData.symbol}
             className="card rounded-xl overflow-hidden group hover:border-border-secondary transition-all duration-200 relative"
           >
             {/* Chart Header */}
             <div
-              className={`p-3 bg-gradient-to-r ${config.color} bg-opacity-10 border-b border-border-primary flex items-center justify-between`}
+              className={`p-3 bg-gradient-to-r ${getColorGradient(index)} bg-opacity-10 border-b border-border-primary flex items-center justify-between`}
             >
               <div className="flex items-center gap-3">
                 {/* Icon */}
                 <div
-                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${config.color} flex items-center justify-center text-white text-xl font-bold shadow-lg`}
+                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getColorGradient(index)} flex items-center justify-center text-white text-xl font-bold shadow-lg`}
                 >
-                  {config.icon}
+                  {symbolData.icon || "●"}
                 </div>
 
                 {/* Name */}
                 <div>
                   <h4 className="font-bold text-white text-sm">
-                    {config.name}
+                    {symbolData.name}
                   </h4>
-                  <p className="text-xs text-gray-400">{config.symbol}</p>
+                  <p className="text-xs text-gray-400">{symbolData.symbol}</p>
                 </div>
               </div>
 
               {/* Maximize Button */}
               <button
-                onClick={() => onSymbolClick?.(config.symbol)}
+                onClick={() => onSymbolClick?.(symbolData.symbol)}
                 className="p-2 rounded-lg hover:bg-bg-card transition-colors opacity-0 group-hover:opacity-100"
                 title="Focus this chart"
               >
@@ -117,7 +119,7 @@ const MultiChartGrid = ({
             {/* Chart */}
             <div className="p-2 bg-bg-card">
               <EnhancedCryptoChart
-                symbol={config.symbol}
+                symbol={symbolData.symbol}
                 timeframe={timeframe}
                 compact={true}
                 height={280}
@@ -134,7 +136,7 @@ const MultiChartGrid = ({
           <span>Shared WebSocket Connection</span>
         </div>
         <span className="text-gray-700">•</span>
-        <span>Single connection for all {SYMBOLS_CONFIG.length} charts</span>
+        <span>Single connection for all {symbols.length} charts</span>
         <span className="text-gray-700">•</span>
         <span>Optimized for scalability</span>
       </div>

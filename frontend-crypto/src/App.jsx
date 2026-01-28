@@ -12,6 +12,7 @@ import { useAuth } from "./context/AuthContext";
 import { useWebSocket } from "./context/WebSocketContext";
 import { CONFIG } from "./config";
 import { checkServiceHealth } from "./utils/helper";
+import symbolService from "./services/symbolService";
 import {
   TrendingUp,
   Wifi,
@@ -22,14 +23,8 @@ import {
   Zap,
   Grid2X2,
   Grid3x3,
+  RefreshCw,
 } from "lucide-react";
-
-const AVAILABLE_SYMBOLS = [
-  { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
-  { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
-  { symbol: "BNBUSDT", name: "BNB", icon: "◆" },
-  { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
-];
 
 const TIMEFRAMES = [
   { value: "1m", label: "1M" },
@@ -52,7 +47,10 @@ function App() {
   const { isAuthenticated } = useAuth();
   const { isConnected: wsConnected } = useWebSocket();
 
-  const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT");
+  // ✨ NEW: Load symbols từ API
+  const [availableSymbols, setAvailableSymbols] = useState([]);
+  const [symbolsLoading, setSymbolsLoading] = useState(true);
+  const [selectedSymbol, setSelectedSymbol] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState("1m");
   const [layoutMode, setLayoutMode] = useState("split");
   const [isConnected, setIsConnected] = useState(false);
@@ -71,6 +69,49 @@ function App() {
     setShowRegisterModal(true);
   };
 
+  // ✨ Load symbols từ API
+  useEffect(() => {
+    loadSymbols();
+  }, []);
+
+  const loadSymbols = async () => {
+    try {
+      setSymbolsLoading(true);
+      const symbols = await symbolService.getActiveSymbols();
+
+      if (symbols && symbols.length > 0) {
+        setAvailableSymbols(symbols);
+        // Set first symbol as default
+        if (!selectedSymbol) {
+          setSelectedSymbol(symbols[0].symbol);
+        }
+        console.log(`✅ Loaded ${symbols.length} active symbols`);
+      } else {
+        console.warn("⚠️ No active symbols found");
+        // Fallback to hardcoded symbols
+        setAvailableSymbols([
+          { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
+          { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
+          { symbol: "BNBUSDT", name: "BNB", icon: "◆" },
+          { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
+        ]);
+        setSelectedSymbol("BTCUSDT");
+      }
+    } catch (error) {
+      console.error("❌ Error loading symbols:", error);
+      // Fallback to hardcoded symbols
+      setAvailableSymbols([
+        { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
+        { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
+        { symbol: "BNBUSDT", name: "BNB", icon: "◆" },
+        { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
+      ]);
+      setSelectedSymbol("BTCUSDT");
+    } finally {
+      setSymbolsLoading(false);
+    }
+  };
+
   // Check system health on mount
   useEffect(() => {
     const checkHealth = async () => {
@@ -85,7 +126,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const selectedSymbolData = AVAILABLE_SYMBOLS.find(
+  const selectedSymbolData = availableSymbols.find(
     (s) => s.symbol === selectedSymbol,
   );
 
@@ -125,9 +166,9 @@ function App() {
             </div>
 
             {/* Center - Symbol Tabs (Hide in grid mode) */}
-            {!isGridMode && (
+            {!isGridMode && !symbolsLoading && (
               <div className="hidden md:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
-                {AVAILABLE_SYMBOLS.map((item) => (
+                {availableSymbols.slice(0, 6).map((item) => (
                   <button
                     key={item.symbol}
                     onClick={() => setSelectedSymbol(item.symbol)}
@@ -141,6 +182,15 @@ function App() {
                     {item.name}
                   </button>
                 ))}
+                {availableSymbols.length > 6 && (
+                  <button
+                    onClick={loadSymbols}
+                    className="px-3 py-2 rounded-md text-sm text-gray-500 hover:text-white"
+                    title="Refresh symbols"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
 
@@ -202,10 +252,10 @@ function App() {
       </nav>
 
       {/* Mobile Symbol Selector (Hide in grid mode) */}
-      {!isGridMode && (
+      {!isGridMode && !symbolsLoading && (
         <div className="md:hidden p-4 border-b border-border-primary">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-            {AVAILABLE_SYMBOLS.map((item) => (
+            {availableSymbols.map((item) => (
               <button
                 key={item.symbol}
                 onClick={() => setSelectedSymbol(item.symbol)}
@@ -224,8 +274,18 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-[1800px] mx-auto p-4 lg:p-6">
+        {/* Loading State */}
+        {symbolsLoading && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <RefreshCw className="w-8 h-8 animate-spin text-accent-primary mx-auto mb-3" />
+              <p className="text-gray-400">Loading symbols...</p>
+            </div>
+          </div>
+        )}
+
         {/* Current Symbol Header (Hide in grid mode) */}
-        {!isGridMode && (
+        {!isGridMode && !symbolsLoading && selectedSymbolData && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-border-secondary flex items-center justify-center text-2xl">
@@ -257,8 +317,9 @@ function App() {
         )}
 
         {/* GRID MODE - Multi-Chart View */}
-        {isGridMode && (
+        {isGridMode && !symbolsLoading && (
           <MultiChartGrid
+            symbols={availableSymbols}
             timeframe={selectedTimeframe}
             gridColumns={layoutMode === "grid-1x4" ? 4 : 2}
             onSymbolClick={(symbol) => {
@@ -269,7 +330,7 @@ function App() {
         )}
 
         {/* SINGLE/SPLIT/NEWS MODES */}
-        {!isGridMode && (
+        {!isGridMode && !symbolsLoading && (
           <div
             className={`grid gap-6 ${
               layoutMode === "split"
