@@ -2,3 +2,20 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-expiration: 900000 # 15 minutes
+    refresh-token-expiration: 604800000 # 7 days
+
+logging:
+  level:
+    com.crypto.gateway_service: DEBUG
+    org.springframework.cloud.gateway: TRACE

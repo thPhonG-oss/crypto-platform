@@ -12,3 +12,79 @@ spring:
           lower-case-service-id: true
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_LAST
+      routes:
+        # Identity Service - Auth endpoints (public)
+        - id: identity-service-auth
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity-service/api/v1/auth/**
+          filters:
+            - StripPrefix=1
+
+        # Identity Service - OAuth2 endpoints (public)
+        - id: identity-service-oauth2
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity-service/oauth2/**, /identity-service/login/oauth2/**
+          filters:
+            - StripPrefix=1
+
+        # Identity Service - User endpoints (authenticated)
+        - id: identity-service-users
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity-service/api/v1/users/**
+          filters:
+            - StripPrefix=1
+
+        # Identity Service - Payment endpoints
+        - id: identity-service-payments
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity-service/api/v1/payments/**
+          filters:
+            - StripPrefix=1
+
+        # Market Service - All endpoints
+        - id: market-service
+          uri: lb://market-service
+          predicates:
+            - Path=/market-service/**
+          filters:
+            - StripPrefix=1
+
+        # Market Service - WebSocket
+        - id: market-service-ws
+          uri: lb:ws://market-service
+          predicates:
+            - Path=/market-service/ws/**
+          filters:
+            - StripPrefix=1
+
+        # Crawler Service - News endpoints
+        - id: crawler-service
+          uri: lb://crawler-service
+          predicates:
+            - Path=/crawler-service/**
+          filters:
+            - StripPrefix=1
+
+        # Analysis Service - AI Analysis (VIP only)
+        - id: analysis-service
+          uri: lb://analysis-service
+          predicates:
+            - Path=/analysis-service/**
+          filters:
+            - StripPrefix=1
+
+# JWT Configuration (must match identity-service)
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-expiration: 900000 # 15 minutes
+    refresh-token-expiration: 604800000 # 7 days
+
+logging:
+  level:
+    com.crypto.gateway_service: DEBUG
+    org.springframework.cloud.gateway: DEBUG

@@ -98,20 +98,17 @@ const NewsCard = ({ article, onClick, compact = false }) => {
       }}
       role="button"
       tabIndex={0}
-      className="glass-panel p-5 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_0_20px_-5px_var(--color-neon-blue)] hover:border-neon-blue/30 transition-all duration-300 relative overflow-hidden rounded-xl"
+      className="bg-bg-tertiary p-4 cursor-pointer group hover:bg-bg-card border border-border-primary hover:border-border-secondary transition-all duration-200 rounded-lg"
     >
-      {/* Hover Glow Effect */}
-      <div className="absolute -inset-1 bg-linear-to-r from-neon-blue to-neon-purple opacity-0 group-hover:opacity-10 transition-opacity blur-xl rounded-xl" />
-
       {/* Header: Source & Time */}
-      <div className="flex justify-between items-start mb-3 relative z-10">
+      <div className="flex justify-between items-start mb-2 relative z-10">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-neon-blue uppercase tracking-widest border border-neon-blue/30 px-2 py-0.5 rounded-full bg-neon-blue/5">
+          <span className="text-xs font-semibold text-accent-primary uppercase tracking-wide">
             {article.source}
           </span>
           {article.parse_method === "gemini" && (
             <span
-              className="flex items-center gap-1 text-xs text-neon-purple font-medium bg-neon-purple/10 px-2 py-0.5 rounded-full border border-neon-purple/30"
+              className="flex items-center gap-1 text-xs text-accent-secondary font-medium bg-accent-secondary/10 px-2 py-0.5 rounded"
               title="Parsed by AI"
             >
               <Sparkles className="w-3 h-3" />
@@ -120,50 +117,36 @@ const NewsCard = ({ article, onClick, compact = false }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium font-mono">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Clock className="w-3 h-3" />
           <span>{getTimeAgo(article.published_at)}</span>
         </div>
       </div>
 
       {/* Title */}
-      <h3 className="text-gray-100 font-bold text-lg mb-3 leading-snug group-hover:text-white group-hover:text-glow transition-all relative z-10">
+      <h3 className="text-gray-100 font-semibold text-base mb-2 leading-snug group-hover:text-white transition-all relative z-10">
         {article.title}
       </h3>
 
       {/* Summary */}
       {article.summary && (
-        <p className="text-gray-400 text-sm mb-4 line-clamp-2 leading-relaxed relative z-10 group-hover:text-gray-300 transition-colors">
+        <p className="text-gray-400 text-sm mb-3 line-clamp-2 leading-relaxed relative z-10">
           {article.summary}
         </p>
       )}
 
-      {/* Tags: Symbols */}
-      {symbols.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4 relative z-10">
-          {symbols.slice(0, 4).map((symbol) => (
-            <span
-              key={symbol}
-              className="bg-gray-800/80 text-gray-300 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-700/50 hover:border-neon-blue/50 hover:text-neon-blue transition-colors"
-            >
-              #{symbol}
-            </span>
-          ))}
-        </div>
-      )}
-
       {/* Footer: Sentiment & Link */}
-      <div className="flex justify-between items-center pt-4 border-t border-white/5 relative z-10">
+      <div className="flex justify-between items-center pt-3 border-t border-border-primary relative z-10">
         {/* Sentiment Badge */}
         {article.sentiment_score !== null ? (
           <div className="flex items-center gap-2">
             <span
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold ${
                 article.sentiment_score > 0.3
-                  ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_10px_-5px_#34d399]"
+                  ? "text-accent-primary bg-accent-primary/10"
                   : article.sentiment_score < -0.3
-                    ? "text-rose-400 border-rose-500/30 bg-rose-500/10 shadow-[0_0_10px_-5px_#fb7185]"
-                    : "text-amber-400 border-amber-500/30 bg-amber-500/10"
+                    ? "text-accent-danger bg-accent-danger/10"
+                    : "text-accent-warning bg-accent-warning/10"
               }`}
             >
               {getSentimentIcon(article.sentiment_score)}
@@ -171,22 +154,20 @@ const NewsCard = ({ article, onClick, compact = false }) => {
             </span>
           </div>
         ) : (
-          <span className="text-xs text-gray-600 font-medium opactiy-50">
-            Neutral
-          </span>
+          <span className="text-xs text-gray-500 font-medium">Neutral</span>
         )}
 
         {/* External Link */}
         {article.url && (
           <button
-            className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-neon-blue transition-colors group/link"
+            className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-accent-primary transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               window.open(article.url, "_blank");
             }}
           >
-            READ SOURCE
-            <ExternalLink className="w-3 h-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+            Read source
+            <ExternalLink className="w-3 h-3" />
           </button>
         )}
       </div>

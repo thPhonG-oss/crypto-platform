@@ -51,6 +51,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_REDIS_HOST=redis
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - crypto-net
     depends_on:
@@ -97,6 +98,57 @@ services:
       - crypto-net
     depends_on:
       timescaledb:
+        condition: service_started
+      discovery-service:
+        condition: service_healthy
+
+  # 7. Analysis Service (AI Sentiment Analysis)
+  analysis-service:
+    build: ./analysis-service
+    container_name: analysis-service
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@timescaledb:5432/crypto_core
+      - EUREKA_SERVER=http://discovery-service:8761/eureka/
+      - SERVICE_NAME=analysis-service
+      - SERVICE_PORT=8002
+      - HOSTNAME=analysis-service
+      - USE_FINBERT=true
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENABLE_SCHEDULER=true
+      - BATCH_SIZE=50
+    ports:
+      - "8002:8002"
+    networks:
+      - crypto-net
+    depends_on:
+      timescaledb:
+        condition: service_started
+      discovery-service:
+        condition: service_healthy
+
+  identity-service:
+    build: ./identity-service
+    container_name: identity-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/crypto_core
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_DATA_REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - VNPAY_TMN_CODE=${VNPAY_TMN_CODE}
+      - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET}
+    ports:
+      - "8003:8003"
+    networks:
+      - crypto-net
+    depends_on:
+      timescaledb:
+        condition: service_started
+      redis:
         condition: service_started
       discovery-service:
         condition: service_healthy
