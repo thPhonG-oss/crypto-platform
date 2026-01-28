@@ -1,10 +1,15 @@
 from typing import Optional, Dict, List
 from bs4 import BeautifulSoup
+from datetime import datetime
+from dateutil import parser
 import re
+from loguru import logger
+
 
 class AdaptiveParser:
     """
     Parser thích nghi với nhiều chiến lược fallback
+    Automatically adapts to HTML structure changes
     """
     
     def __init__(self, gemini_parser):
@@ -15,28 +20,43 @@ class AdaptiveParser:
         """
         Parse với fallback chain:
         1. Cached selector (nhanh nhất)
-        2. Semantic HTML
+        2. Semantic HTML + Heuristics
         3. OpenGraph/Meta tags
         4. Pattern matching
         5. Gemini AI (chậm nhất, đắt nhất)
         """
+        if not html:
+            logger.error(f"No HTML provided for {url}")
+            return None
+        
         soup = BeautifulSoup(html, 'lxml')
         
         # Strategy 1: Cached selector (từ lần parse thành công trước)
         if source in self.success_cache:
-            result = self._try_cached_selectors(soup, source)
+            result = self._try_cached_selectors(soup, source, url)
             if result:
+                logger.debug(f"✅ Used cached strategy for {source}")
                 return result
         
         # Strategy 2: Semantic HTML + Heuristics
         result = self._semantic_parse(soup, url, source)
         if self._is_valid_result(result):
             self._update_cache(source, result)
+            logger.info(f"✅ Semantic parsing succeeded for {url}")
             return result
         
         # Strategy 3: Gemini AI (Last resort)
-        logger.warning(f"Semantic parsing failed for {url}, using Gemini AI")
-        return self.gemini_parser.parse_article(url, source, html)
+        logger.warning(f"⚠️ Semantic parsing failed for {url}, would use Gemini AI")
+        # Note: Gemini will be called by CrawlerService if this returns None
+        return None
+    
+    def _try_cached_selectors(self, soup: BeautifulSoup, source: str, url: str) -> Optional[Dict]:
+        """
+        Try using previously successful parsing strategy
+        """
+        # For now, just try semantic parse again
+        # In production, cache actual selectors used
+        return None
     
     def _semantic_parse(self, soup: BeautifulSoup, url: str, source: str) -> Dict:
         """
@@ -85,6 +105,7 @@ class AdaptiveParser:
                     if text and len(text.strip()) > 10:
                         return text.strip()
             except Exception as e:
+                logger.debug(f"Title extraction strategy failed: {e}")
                 continue
         
         return None
@@ -102,7 +123,11 @@ class AdaptiveParser:
             
             # Get all paragraphs
             paragraphs = article.find_all('p')
-            content = '\n\n'.join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 50])
+            content = '\n\n'.join([
+                p.get_text().strip() 
+                for p in paragraphs 
+                if len(p.get_text().strip()) > 50
+            ])
             
             if len(content) > 200:
                 return content
@@ -117,31 +142,46 @@ class AdaptiveParser:
         ]
         
         for selector in main_selectors:
-            container = soup.select_one(selector)
-            if container:
-                paragraphs = container.find_all('p')
-                content = '\n\n'.join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 50])
+            try:
+                container = soup.select_one(selector)
+                if container:
+                    paragraphs = container.find_all('p')
+                    content = '\n\n'.join([
+                        p.get_text().strip() 
+                        for p in paragraphs 
+                        if len(p.get_text().strip()) > 50
+                    ])
+                    
+                    if len(content) > 200:
+                        return content
+            except Exception as e:
+                logger.debug(f"Content selector {selector} failed: {e}")
+                continue
+        
+        # 3. Heuristic: Find div with most <p> tags
+        try:
+            all_divs = soup.find_all('div')
+            best_div = None
+            max_p_count = 0
+            
+            for div in all_divs:
+                p_count = len(div.find_all('p'))
+                if p_count > max_p_count:
+                    max_p_count = p_count
+                    best_div = div
+            
+            if best_div and max_p_count >= 3:
+                paragraphs = best_div.find_all('p')
+                content = '\n\n'.join([
+                    p.get_text().strip() 
+                    for p in paragraphs 
+                    if len(p.get_text().strip()) > 50
+                ])
                 
                 if len(content) > 200:
                     return content
-        
-        # 3. Heuristic: Find div with most <p> tags
-        all_divs = soup.find_all('div')
-        best_div = None
-        max_p_count = 0
-        
-        for div in all_divs:
-            p_count = len(div.find_all('p'))
-            if p_count > max_p_count:
-                max_p_count = p_count
-                best_div = div
-        
-        if best_div and max_p_count >= 3:
-            paragraphs = best_div.find_all('p')
-            content = '\n\n'.join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 50])
-            
-            if len(content) > 200:
-                return content
+        except Exception as e:
+            logger.debug(f"Heuristic content extraction failed: {e}")
         
         return None
     
@@ -162,7 +202,8 @@ class AdaptiveParser:
                     text = element.get('content') or element.get_text()
                     if text and len(text.strip()) > 2:
                         return text.strip()
-            except:
+            except Exception as e:
+                logger.debug(f"Author extraction strategy failed: {e}")
                 continue
         
         return None
@@ -182,7 +223,8 @@ class AdaptiveParser:
                     date_str = element.get('datetime') or element.get('content')
                     if date_str:
                         return parser.parse(date_str)
-            except:
+            except Exception as e:
+                logger.debug(f"Date extraction strategy failed: {e}")
                 continue
         
         return None
@@ -196,9 +238,11 @@ class AdaptiveParser:
         
         # Check minimum lengths
         if len(result['title']) < 10:
+            logger.debug(f"Title too short: {len(result['title'])} chars")
             return False
         
         if len(result['content']) < 200:
+            logger.debug(f"Content too short: {len(result['content'])} chars")
             return False
         
         return True
@@ -212,3 +256,4 @@ class AdaptiveParser:
             'last_success': datetime.now(),
             'parse_method': result['parse_method']
         }
+        logger.debug(f"Cached successful parsing strategy for {source}")
