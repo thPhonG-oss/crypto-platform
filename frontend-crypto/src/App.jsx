@@ -24,6 +24,7 @@ import {
   Grid2X2,
   Grid3x3,
   RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 const TIMEFRAMES = [
@@ -47,9 +48,10 @@ function App() {
   const { isAuthenticated } = useAuth();
   const { isConnected: wsConnected } = useWebSocket();
 
-  // ✨ NEW: Load symbols từ API
+  // ✨ Dynamic symbols from API
   const [availableSymbols, setAvailableSymbols] = useState([]);
   const [symbolsLoading, setSymbolsLoading] = useState(true);
+  const [symbolsError, setSymbolsError] = useState(null);
   const [selectedSymbol, setSelectedSymbol] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState("1m");
   const [layoutMode, setLayoutMode] = useState("split");
@@ -77,36 +79,32 @@ function App() {
   const loadSymbols = async () => {
     try {
       setSymbolsLoading(true);
+      setSymbolsError(null);
+
+      console.log("[App] Loading symbols from API...");
       const symbols = await symbolService.getActiveSymbols();
 
       if (symbols && symbols.length > 0) {
+        console.log(
+          `✅ Loaded ${symbols.length} active symbols:`,
+          symbols.map((s) => s.symbol).join(", "),
+        );
         setAvailableSymbols(symbols);
-        // Set first symbol as default
-        if (!selectedSymbol) {
+
+        // Set first symbol as default if not already set
+        if (!selectedSymbol && symbols[0]) {
           setSelectedSymbol(symbols[0].symbol);
+          console.log(`[App] Selected default symbol: ${symbols[0].symbol}`);
         }
-        console.log(`✅ Loaded ${symbols.length} active symbols`);
       } else {
-        console.warn("⚠️ No active symbols found");
-        // Fallback to hardcoded symbols
-        setAvailableSymbols([
-          { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
-          { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
-          { symbol: "BNBUSDT", name: "BNB", icon: "◆" },
-          { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
-        ]);
-        setSelectedSymbol("BTCUSDT");
+        console.warn("⚠️ No active symbols found from API");
+        setSymbolsError(
+          "No active symbols available. Please contact admin to enable symbols.",
+        );
       }
     } catch (error) {
       console.error("❌ Error loading symbols:", error);
-      // Fallback to hardcoded symbols
-      setAvailableSymbols([
-        { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
-        { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
-        { symbol: "BNBUSDT", name: "BNB", icon: "◆" },
-        { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
-      ]);
-      setSelectedSymbol("BTCUSDT");
+      setSymbolsError("Failed to load symbols from server");
     } finally {
       setSymbolsLoading(false);
     }
@@ -166,7 +164,7 @@ function App() {
             </div>
 
             {/* Center - Symbol Tabs (Hide in grid mode) */}
-            {!isGridMode && !symbolsLoading && (
+            {!isGridMode && !symbolsLoading && availableSymbols.length > 0 && (
               <div className="hidden md:flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
                 {availableSymbols.slice(0, 6).map((item) => (
                   <button
@@ -185,10 +183,13 @@ function App() {
                 {availableSymbols.length > 6 && (
                   <button
                     onClick={loadSymbols}
-                    className="px-3 py-2 rounded-md text-sm text-gray-500 hover:text-white"
+                    className="px-3 py-2 rounded-md text-sm text-gray-500 hover:text-white flex items-center gap-1"
                     title="Refresh symbols"
                   >
                     <RefreshCw className="w-4 h-4" />
+                    <span className="text-xs">
+                      +{availableSymbols.length - 6}
+                    </span>
                   </button>
                 )}
               </div>
@@ -252,7 +253,7 @@ function App() {
       </nav>
 
       {/* Mobile Symbol Selector (Hide in grid mode) */}
-      {!isGridMode && !symbolsLoading && (
+      {!isGridMode && !symbolsLoading && availableSymbols.length > 0 && (
         <div className="md:hidden p-4 border-b border-border-primary">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
             {availableSymbols.map((item) => (
@@ -284,103 +285,134 @@ function App() {
           </div>
         )}
 
-        {/* Current Symbol Header (Hide in grid mode) */}
-        {!isGridMode && !symbolsLoading && selectedSymbolData && (
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-border-secondary flex items-center justify-center text-2xl">
-                {selectedSymbolData?.icon}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">
-                  {selectedSymbolData?.name}
-                </h2>
-                <p className="text-sm text-gray-500">{selectedSymbol}</p>
-              </div>
-            </div>
-
-            {/* Mobile Timeframe */}
-            <div className="sm:hidden">
-              <select
-                value={selectedTimeframe}
-                onChange={(e) => setSelectedTimeframe(e.target.value)}
-                className="bg-bg-card border border-border-primary rounded-lg px-3 py-2 text-sm text-white"
+        {/* Error State */}
+        {symbolsError && !symbolsLoading && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center max-w-md">
+              <AlertCircle className="w-12 h-12 text-accent-danger mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">
+                No Symbols Available
+              </h3>
+              <p className="text-gray-400 mb-4">{symbolsError}</p>
+              <button
+                onClick={loadSymbols}
+                className="px-6 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition-all inline-flex items-center gap-2"
               >
-                {TIMEFRAMES.map((tf) => (
-                  <option key={tf.value} value={tf.value}>
-                    {tf.label}
-                  </option>
-                ))}
-              </select>
+                <RefreshCw className="w-4 h-4" />
+                Retry
+              </button>
             </div>
           </div>
         )}
+
+        {/* Current Symbol Header (Hide in grid mode) */}
+        {!isGridMode &&
+          !symbolsLoading &&
+          !symbolsError &&
+          selectedSymbolData && (
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-border-secondary flex items-center justify-center text-2xl">
+                  {selectedSymbolData?.icon}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {selectedSymbolData?.name}
+                  </h2>
+                  <p className="text-sm text-gray-500">{selectedSymbol}</p>
+                </div>
+              </div>
+
+              {/* Mobile Timeframe */}
+              <div className="sm:hidden">
+                <select
+                  value={selectedTimeframe}
+                  onChange={(e) => setSelectedTimeframe(e.target.value)}
+                  className="bg-bg-card border border-border-primary rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  {TIMEFRAMES.map((tf) => (
+                    <option key={tf.value} value={tf.value}>
+                      {tf.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
         {/* GRID MODE - Multi-Chart View */}
-        {isGridMode && !symbolsLoading && (
-          <MultiChartGrid
-            symbols={availableSymbols}
-            timeframe={selectedTimeframe}
-            gridColumns={layoutMode === "grid-1x4" ? 4 : 2}
-            onSymbolClick={(symbol) => {
-              setSelectedSymbol(symbol);
-              setLayoutMode("split");
-            }}
-          />
-        )}
+        {isGridMode &&
+          !symbolsLoading &&
+          !symbolsError &&
+          availableSymbols.length > 0 && (
+            <MultiChartGrid
+              symbols={availableSymbols}
+              timeframe={selectedTimeframe}
+              gridColumns={layoutMode === "grid-1x4" ? 4 : 2}
+              onSymbolClick={(symbol) => {
+                setSelectedSymbol(symbol);
+                setLayoutMode("split");
+              }}
+            />
+          )}
 
         {/* SINGLE/SPLIT/NEWS MODES */}
-        {!isGridMode && !symbolsLoading && (
-          <div
-            className={`grid gap-6 ${
-              layoutMode === "split"
-                ? "lg:grid-cols-[1fr,400px]"
-                : "grid-cols-1"
-            }`}
-          >
-            {/* Chart Section */}
-            {(layoutMode === "split" || layoutMode === "chart-only") && (
-              <div className="card rounded-2xl overflow-hidden">
-                <div className="p-4 border-b border-border-primary flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-accent-primary" />
-                    <span className="font-semibold text-white">
-                      {selectedSymbol} Chart
-                    </span>
+        {!isGridMode &&
+          !symbolsLoading &&
+          !symbolsError &&
+          availableSymbols.length > 0 && (
+            <div
+              className={`grid gap-6 ${
+                layoutMode === "split"
+                  ? "lg:grid-cols-[1fr,400px]"
+                  : "grid-cols-1"
+              }`}
+            >
+              {/* Chart Section */}
+              {(layoutMode === "split" || layoutMode === "chart-only") && (
+                <div className="card rounded-2xl overflow-hidden">
+                  <div className="p-4 border-b border-border-primary flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-accent-primary" />
+                      <span className="font-semibold text-white">
+                        {selectedSymbol} Chart
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-xs font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
+                        Live
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-primary/10 text-accent-primary text-xs font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
-                      Live
-                    </span>
+                  <div className="h-[500px] lg:h-[600px]">
+                    <EnhancedCryptoChart
+                      symbol={selectedSymbol}
+                      timeframe={selectedTimeframe}
+                      height={600}
+                    />
                   </div>
                 </div>
-                <div className="h-[500px] lg:h-[600px]">
-                  <EnhancedCryptoChart
-                    symbol={selectedSymbol}
-                    timeframe={selectedTimeframe}
-                    height={600}
-                  />
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* News Section */}
-            {(layoutMode === "split" || layoutMode === "news-only") && (
-              <div className="card rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[680px]">
-                <div className="p-4 border-b border-border-primary flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-accent-warning" />
-                    <span className="font-semibold text-white">Live Feed</span>
+              {/* News Section */}
+              {(layoutMode === "split" || layoutMode === "news-only") && (
+                <div className="card rounded-2xl overflow-hidden flex flex-col h-[600px] lg:h-[680px]">
+                  <div className="p-4 border-b border-border-primary flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-accent-warning" />
+                      <span className="font-semibold text-white">
+                        Live Feed
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <NewsPanel selectedSymbol={selectedSymbol} />
                   </div>
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <NewsPanel selectedSymbol={selectedSymbol} />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
       </main>
 
       {/* Auth Modals */}
