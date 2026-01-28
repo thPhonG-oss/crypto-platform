@@ -51,6 +51,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_REDIS_HOST=redis
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - crypto-net
     depends_on:
@@ -135,7 +136,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=admin
       - SPRING_DATASOURCE_PASSWORD=admin
       - SPRING_DATA_REDIS_HOST=redis
-      - JWT_SECRET=your-super-secret-key-must-be-at-least-32-characters-long-for-security
+      - JWT_SECRET=${JWT_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - VNPAY_TMN_CODE=${VNPAY_TMN_CODE}
