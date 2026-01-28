@@ -1,9 +1,9 @@
 from typing import Optional, Dict, List
 from bs4 import BeautifulSoup
-from datetime import datetime
-from dateutil import parser
+from datetime import datetime  # ✅ ADD
+from dateutil import parser    # ✅ ADD
 import re
-from loguru import logger
+from loguru import logger      # ✅ ADD
 
 
 class AdaptiveParser:
@@ -15,6 +15,7 @@ class AdaptiveParser:
     def __init__(self, gemini_parser):
         self.gemini_parser = gemini_parser
         self.success_cache = {}  # Cache selectors thành công
+        logger.info("✅ AdaptiveParser initialized")
     
     def parse_article(self, url: str, source: str, html: str) -> Optional[Dict]:
         """
@@ -23,7 +24,8 @@ class AdaptiveParser:
         2. Semantic HTML + Heuristics
         3. OpenGraph/Meta tags
         4. Pattern matching
-        5. Gemini AI (chậm nhất, đắt nhất)
+        
+        Note: Gemini AI fallback is handled by CrawlerService
         """
         if not html:
             logger.error(f"No HTML provided for {url}")
@@ -31,7 +33,7 @@ class AdaptiveParser:
         
         soup = BeautifulSoup(html, 'lxml')
         
-        # Strategy 1: Cached selector (từ lần parse thành công trước)
+        # Strategy 1: Cached selector
         if source in self.success_cache:
             result = self._try_cached_selectors(soup, source, url)
             if result:
@@ -45,23 +47,18 @@ class AdaptiveParser:
             logger.info(f"✅ Semantic parsing succeeded for {url}")
             return result
         
-        # Strategy 3: Gemini AI (Last resort)
-        logger.warning(f"⚠️ Semantic parsing failed for {url}, would use Gemini AI")
-        # Note: Gemini will be called by CrawlerService if this returns None
+        # If semantic fails, return None (CrawlerService will use Gemini)
+        logger.warning(f"⚠️ Semantic parsing failed for {url}")
         return None
     
     def _try_cached_selectors(self, soup: BeautifulSoup, source: str, url: str) -> Optional[Dict]:
-        """
-        Try using previously successful parsing strategy
-        """
+        """Try using previously successful parsing strategy"""
         # For now, just try semantic parse again
         # In production, cache actual selectors used
         return None
     
     def _semantic_parse(self, soup: BeautifulSoup, url: str, source: str) -> Dict:
-        """
-        Parse dựa trên cấu trúc HTML semantic và heuristics
-        """
+        """Parse dựa trên cấu trúc HTML semantic và heuristics"""
         return {
             'title': self._extract_title(soup),
             'content': self._extract_content(soup),
@@ -73,9 +70,7 @@ class AdaptiveParser:
         }
     
     def _extract_title(self, soup: BeautifulSoup) -> Optional[str]:
-        """
-        Multiple strategies để extract title
-        """
+        """Multiple strategies để extract title"""
         strategies = [
             # 1. Semantic HTML
             lambda: soup.select_one("article h1"),
@@ -111,9 +106,7 @@ class AdaptiveParser:
         return None
     
     def _extract_content(self, soup: BeautifulSoup) -> Optional[str]:
-        """
-        Extract main content với noise filtering
-        """
+        """Extract main content với noise filtering"""
         # 1. Try semantic HTML
         article = soup.find('article')
         if article:
@@ -222,6 +215,7 @@ class AdaptiveParser:
                 if element:
                     date_str = element.get('datetime') or element.get('content')
                     if date_str:
+                        # ✅ Use imported parser
                         return parser.parse(date_str)
             except Exception as e:
                 logger.debug(f"Date extraction strategy failed: {e}")
@@ -230,9 +224,7 @@ class AdaptiveParser:
         return None
     
     def _is_valid_result(self, result: Dict) -> bool:
-        """
-        Validate result quality
-        """
+        """Validate result quality"""
         if not result.get('title') or not result.get('content'):
             return False
         
@@ -248,10 +240,8 @@ class AdaptiveParser:
         return True
     
     def _update_cache(self, source: str, result: Dict):
-        """
-        Cache selectors that worked
-        (Simplified - in production, cache actual selectors used)
-        """
+        """Cache selectors that worked"""
+        # ✅ Use imported datetime
         self.success_cache[source] = {
             'last_success': datetime.now(),
             'parse_method': result['parse_method']
